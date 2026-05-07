@@ -3,6 +3,8 @@ package com.skeler.pulse.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.skeler.pulse.InboxAccessState
+import com.skeler.pulse.contact.matchesBlockedSenderKey
+import com.skeler.pulse.contact.toBlockedSenderKeyOrNull
 import com.skeler.pulse.sms.ImportantMessagePreferences
 import com.skeler.pulse.sms.InboxThreadPreferences
 import com.skeler.pulse.sms.SmsThread
@@ -38,6 +40,14 @@ internal fun SmsThread.matchesReadTarget(target: ReadConversationTarget): Boolea
     else -> false
 }
 
+internal fun SmsThread.isBlockedBy(blockedAddresses: Set<String>): Boolean =
+    address.toBlockedSenderKeyOrNull()
+        ?.let { threadKey -> blockedAddresses.any { blockedKey -> blockedKey.matchesBlockedSenderKey(threadKey) } }
+        ?: false
+
+internal fun List<SmsThread>.withoutBlockedAddresses(blockedAddresses: Set<String>): List<SmsThread> =
+    filterNot { thread -> thread.isBlockedBy(blockedAddresses) }
+
 /**
  * State for the real SMS inbox, reading from [SystemSmsReader].
  */
@@ -46,6 +56,7 @@ data class RealInboxState(
     val archivedThreads: List<SmsThread> = emptyList(),
     val pinnedThreadIds: Set<Long> = emptySet(),
     val archivedThreadIds: Set<Long> = emptySet(),
+    val blockedAddresses: Set<String> = emptySet(),
     val loading: Boolean = true,
     val showLoadingCard: Boolean = false,
     val permissionDenied: Boolean = false,
@@ -117,26 +128,34 @@ class RealSmsViewModel(
                     smsReader.observeThreads(),
                     inboxThreadPreferences.pinnedThreadIds,
                     inboxThreadPreferences.archivedThreadIds,
-                ) { threads, pinnedIds, archivedIds ->
-                    Triple(threads, pinnedIds, archivedIds)
-                }.collectLatest { (threads, pinnedIds, archivedIds) ->
+                    inboxThreadPreferences.blockedAddresses,
+                ) { threads, pinnedIds, archivedIds, blockedAddresses ->
+                    InboxThreadPreferenceSnapshot(
+                        threads = threads,
+                        pinnedIds = pinnedIds,
+                        archivedIds = archivedIds,
+                        blockedAddresses = blockedAddresses,
+                    )
+                }.collectLatest { snapshot ->
                     val readTarget = pendingReadTarget
                     val threadsWithReadOverlay = if (readTarget == null) {
-                        threads
+                        snapshot.threads
                     } else {
-                        threads.map { thread ->
+                        snapshot.threads.map { thread ->
                             if (thread.matchesReadTarget(readTarget)) thread.asRead() else thread
                         }
                     }
                     val sortedThreads = threadsWithReadOverlay
-                        .sortedWith(compareByDescending<SmsThread> { it.threadId in pinnedIds }.thenByDescending { it.date })
-                    val visibleThreads = sortedThreads.filterNot { it.threadId in archivedIds }
-                    val archivedThreads = sortedThreads.filter { it.threadId in archivedIds }
+                        .withoutBlockedAddresses(snapshot.blockedAddresses)
+                        .sortedWith(compareByDescending<SmsThread> { it.threadId in snapshot.pinnedIds }.thenByDescending { it.date })
+                    val visibleThreads = sortedThreads.filterNot { it.threadId in snapshot.archivedIds }
+                    val archivedThreads = sortedThreads.filter { it.threadId in snapshot.archivedIds }
                     _inboxState.value = _inboxState.value.copy(
                         threads = visibleThreads,
                         archivedThreads = archivedThreads,
-                        pinnedThreadIds = pinnedIds,
-                        archivedThreadIds = archivedIds,
+                        pinnedThreadIds = snapshot.pinnedIds,
+                        archivedThreadIds = snapshot.archivedIds,
+                        blockedAddresses = snapshot.blockedAddresses,
                         loading = false,
                         showLoadingCard = false,
                         errorMessage = null,
@@ -316,6 +335,37 @@ class RealSmsViewModel(
         }
     }
 
+    fun blockThread(address: String) {
+        val blockedKey = address.toBlockedSenderKeyOrNull() ?: return
+        _inboxState.value = _inboxState.value.let { current ->
+            val blockedAddresses = current.blockedAddresses
+                .filterNot { existing -> existing.matchesBlockedSenderKey(blockedKey) }
+                .toSet() + blockedKey
+            current.copy(
+                threads = current.threads.withoutBlockedAddresses(blockedAddresses),
+                archivedThreads = current.archivedThreads.withoutBlockedAddresses(blockedAddresses),
+                blockedAddresses = blockedAddresses,
+            )
+        }
+        viewModelScope.launch {
+            inboxThreadPreferences.blockAddress(address)
+        }
+    }
+
+    fun unblockThread(address: String) {
+        val blockedKey = address.toBlockedSenderKeyOrNull() ?: return
+        _inboxState.value = _inboxState.value.let { current ->
+            current.copy(
+                blockedAddresses = current.blockedAddresses
+                    .filterNot { existing -> existing.matchesBlockedSenderKey(blockedKey) }
+                    .toSet(),
+            )
+        }
+        viewModelScope.launch {
+            inboxThreadPreferences.unblockAddress(address)
+        }
+    }
+
     fun deleteMessage(messageId: Long) {
         viewModelScope.launch {
             smsReader.deleteMessage(messageId)
@@ -328,3 +378,10 @@ class RealSmsViewModel(
         super.onCleared()
     }
 }
+
+private data class InboxThreadPreferenceSnapshot(
+    val threads: List<SmsThread>,
+    val pinnedIds: Set<Long>,
+    val archivedIds: Set<Long>,
+    val blockedAddresses: Set<String>,
+)

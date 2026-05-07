@@ -7,9 +7,10 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import android.util.Base64
+import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.Arrays
+import java.util.Base64
 import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.PBEKeySpec
 import kotlinx.coroutines.flow.Flow
@@ -136,6 +137,12 @@ class ThemePreferences(private val context: Context) {
     }
 }
 
+fun verifySecurityPassword(password: String, verifierToken: String): Boolean =
+    SecurityPasswordVerifierToken.verify(password, verifierToken)
+
+internal fun securityPasswordVerifierTokenFromPassword(password: String): String =
+    SecurityPasswordVerifierToken.fromPassword(password)
+
 private object SecurityPasswordVerifierToken {
     private const val PREFIX = "pbkdf2_sha256"
     private const val ITERATIONS = 120_000
@@ -150,20 +157,39 @@ private object SecurityPasswordVerifierToken {
         val salt = ByteArray(SALT_BYTES).also(SecureRandom()::nextBytes)
         val passwordChars = password.toCharArray()
         return try {
-            val hash = derive(passwordChars, salt)
+            val hash = derive(passwordChars, salt, ITERATIONS)
             listOf(
                 PREFIX,
                 ITERATIONS.toString(),
-                Base64.encodeToString(salt, Base64.NO_WRAP),
-                Base64.encodeToString(hash, Base64.NO_WRAP),
+                Base64.getEncoder().encodeToString(salt),
+                Base64.getEncoder().encodeToString(hash),
             ).joinToString(":")
         } finally {
             Arrays.fill(passwordChars, '\u0000')
         }
     }
 
-    private fun derive(password: CharArray, salt: ByteArray): ByteArray {
-        val spec = PBEKeySpec(password, salt, ITERATIONS, KEY_LENGTH_BITS)
+    fun verify(password: String, token: String): Boolean {
+        if (password.isBlank() || !isToken(token)) return false
+        val parts = token.split(":")
+        if (parts.size != 4) return false
+
+        val iterations = parts[1].toIntOrNull()?.takeIf { it > 0 } ?: return false
+        val salt = runCatching { Base64.getDecoder().decode(parts[2]) }.getOrNull() ?: return false
+        val expectedHash = runCatching { Base64.getDecoder().decode(parts[3]) }.getOrNull() ?: return false
+        if (salt.isEmpty() || expectedHash.isEmpty()) return false
+
+        val passwordChars = password.toCharArray()
+        return try {
+            val actualHash = derive(passwordChars, salt, iterations)
+            MessageDigest.isEqual(actualHash, expectedHash)
+        } finally {
+            Arrays.fill(passwordChars, '\u0000')
+        }
+    }
+
+    private fun derive(password: CharArray, salt: ByteArray, iterations: Int): ByteArray {
+        val spec = PBEKeySpec(password, salt, iterations, KEY_LENGTH_BITS)
         return try {
             SecretKeyFactory.getInstance(ALGORITHM).generateSecret(spec).encoded
         } finally {
