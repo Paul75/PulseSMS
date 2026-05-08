@@ -127,6 +127,7 @@ dependencies {
     implementation(project(":feature:messaging"))
     implementation(project(":feature:sync"))
     implementation(libs.androidx.biometric)
+    implementation(libs.androidx.fragment)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
