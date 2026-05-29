@@ -37,6 +37,14 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
+internal const val CALLBACK_REQUEST_CODE_MULTIPLIER = 31L
+internal const val CALLBACK_REQUEST_CODE_MODULUS = 2_147_483_648L
+
+internal fun callbackRequestCode(token: String, partIndex: Int): Int {
+    val rawRequestCode = token.hashCode().toLong() * CALLBACK_REQUEST_CODE_MULTIPLIER + partIndex
+    return Math.floorMod(rawRequestCode, CALLBACK_REQUEST_CODE_MODULUS).toInt()
+}
+
 /**
  * Data class representing a single SMS message from the system content provider.
  */
@@ -520,7 +528,7 @@ class SystemSmsReader(
             intents.add(
                 PendingIntent.getBroadcast(
                     context,
-                    (token.hashCode() * 31) + index,
+                    callbackRequestCode(token, index),
                     intent,
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
                 )

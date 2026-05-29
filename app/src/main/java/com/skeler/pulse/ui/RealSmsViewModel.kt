@@ -10,6 +10,7 @@ import com.skeler.pulse.sms.InboxThreadPreferences
 import com.skeler.pulse.sms.SmsThread
 import com.skeler.pulse.sms.SystemSms
 import com.skeler.pulse.sms.SystemSmsReader
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,6 +22,8 @@ import kotlinx.coroutines.launch
 internal fun List<SystemSms>.hasUnreadInboundMessages(): Boolean = any { message ->
     message.isInbound && !message.read
 }
+
+internal fun String.isReplyableConversationAddress(): Boolean = none(Char::isLetter)
 
 private fun SystemSms.asReadIfInbound(): SystemSms = if (isInbound && !read) {
     copy(read = true)
@@ -77,6 +80,7 @@ data class RealConversationState(
     val messages: List<SystemSms> = emptyList(),
     val loading: Boolean = true,
     val importantMessageIds: Set<Long> = emptySet(),
+    val isReplyable: Boolean = true,
 )
 
 sealed interface SendState {
@@ -161,6 +165,8 @@ class RealSmsViewModel(
                         errorMessage = null,
                     )
                 }
+            } catch (exception: CancellationException) {
+                throw exception
             } catch (_: Exception) {
                 _inboxState.value = _inboxState.value.copy(
                     threads = emptyList(),
@@ -219,7 +225,11 @@ class RealSmsViewModel(
         activeConversationThreadId = threadId
         pendingReadTarget = ReadConversationTarget(address = address, threadId = threadId)
         conversationJob?.cancel()
-        _conversationState.value = RealConversationState(address = address, loading = true)
+        _conversationState.value = RealConversationState(
+            address = address,
+            loading = true,
+            isReplyable = address.isReplyableConversationAddress(),
+        )
         _inboxState.value = _inboxState.value.copy(
             threads = _inboxState.value.threads.map { thread ->
                 if (thread.matchesReadTarget(pendingReadTarget!!)) thread.asRead() else thread
@@ -245,6 +255,7 @@ class RealSmsViewModel(
                     messages = visibleMessages,
                     loading = false,
                     importantMessageIds = visibleImportantIds,
+                    isReplyable = address.isReplyableConversationAddress(),
                 ) to hasUnreadInbound
             }.collectLatest { (conversationState, hasUnreadInbound) ->
                 _conversationState.value = conversationState
@@ -286,6 +297,8 @@ class RealSmsViewModel(
             try {
                 smsReader.sendSms(address, trimmedBody, subscriptionId)
                 _sendState.value = SendState.Sent(trimmedBody)
+            } catch (exception: CancellationException) {
+                throw exception
             } catch (_: Exception) {
                 _sendState.value = SendState.Failed(trimmedBody)
             }

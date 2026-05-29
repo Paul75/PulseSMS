@@ -2,9 +2,11 @@ package com.skeler.pulse.security.data
 
 import android.content.Context
 import android.content.pm.PackageManager
+import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyInfo
 import android.security.keystore.KeyProperties
+import android.util.Log
 import com.skeler.pulse.contracts.security.KeyManagementState
 import com.skeler.pulse.contracts.security.KeyStoreCapability
 import com.skeler.pulse.security.api.KeyMaterialStore
@@ -28,7 +30,7 @@ class AndroidKeyMaterialStore(
 
     override fun getCapability(): KeyStoreCapability = try {
         androidKeyStore()
-        if (context.packageManager.hasSystemFeature(PackageManager.FEATURE_STRONGBOX_KEYSTORE)) {
+        if (hasStrongBoxFeature()) {
             KeyStoreCapability.Available(hardwareBacked = true)
         } else {
             KeyStoreCapability.SoftwareOnly
@@ -57,24 +59,40 @@ class AndroidKeyMaterialStore(
             return existing
         }
 
+        val shouldPreferStrongBox = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && hasStrongBoxFeature()
+        return try {
+            generateKey(alias = alias, shouldUseStrongBox = shouldPreferStrongBox)
+        } catch (exception: Exception) {
+            if (!shouldPreferStrongBox) {
+                throw exception
+            }
+            Log.w(TAG, "StrongBox key creation failed for '$alias'; retrying with Android Keystore.", exception)
+            generateKey(alias = alias, shouldUseStrongBox = false)
+        }
+    }
+
+    private fun generateKey(alias: String, shouldUseStrongBox: Boolean): SecretKey {
         val keyGenerator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, ANDROID_KEY_STORE)
-        keyGenerator.init(
-            KeyGenParameterSpec.Builder(
-                alias,
-                KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT,
-            )
-                .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
-                .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
-                .setKeySize(KEY_SIZE_BITS)
-                .setIsStrongBoxBacked(requireStrongBoxBacking())
-                .build()
+        val keySpecBuilder = KeyGenParameterSpec.Builder(
+            alias,
+            KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT,
         )
+            .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+            .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+            .setKeySize(KEY_SIZE_BITS)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && shouldUseStrongBox) {
+            keySpecBuilder.setIsStrongBoxBacked(true)
+        }
+        keyGenerator.init(keySpecBuilder.build())
         val key = keyGenerator.generateKey()
         verifyHardwareBacking(alias, key)
         return key
     }
 
-    private fun requireStrongBoxBacking(): Boolean {
+    private fun hasStrongBoxFeature(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+            return false
+        }
         return try {
             context.packageManager.hasSystemFeature(PackageManager.FEATURE_STRONGBOX_KEYSTORE)
         } catch (_: Exception) {
@@ -83,16 +101,28 @@ class AndroidKeyMaterialStore(
     }
 
     private fun verifyHardwareBacking(alias: String, key: SecretKey) {
-        val factory = SecretKeyFactory.getInstance(key.algorithm, ANDROID_KEY_STORE)
-        val keyInfo = factory.getKeySpec(key, KeyInfo::class.java) as KeyInfo
-        require(keyInfo.isInsideSecureHardware) {
-            "Key '$alias' was generated with StrongBox flag but is not hardware-backed. Hardware keystore may be compromised."
+        try {
+            val factory = SecretKeyFactory.getInstance(key.algorithm, ANDROID_KEY_STORE)
+            val keyInfo = factory.getKeySpec(key, KeyInfo::class.java) as KeyInfo
+            if (!keyInfo.isInsideSecureHardware) {
+                Log.w(
+                    TAG,
+                    "Key '$alias' is not hardware-backed; falling back to software keystore.",
+                )
+            }
+        } catch (e: Exception) {
+            Log.w(
+                TAG,
+                "Could not verify hardware backing for '$alias'",
+                e,
+            )
         }
     }
 
     private fun androidKeyStore(): KeyStore = KeyStore.getInstance(ANDROID_KEY_STORE).also { it.load(null) }
 
     private companion object {
+        const val TAG = "AndroidKeyMaterialStore"
         const val ANDROID_KEY_STORE = "AndroidKeyStore"
         const val KEY_SIZE_BITS = 256
     }

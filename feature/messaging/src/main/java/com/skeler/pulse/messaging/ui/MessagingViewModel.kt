@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
@@ -68,17 +69,18 @@ class MessagingViewModel(
     }
 
     private fun updatePriority(priority: BusinessPriority) {
-        val current = mutableState.value
-        val updatedComposer = current.composer.copy(
-            draft = current.composer.draft.copy(priority = priority),
-        )
-        mutableState.value = when (current) {
-            is MessagingState.Blocked -> current.copy(composer = updatedComposer)
-            is MessagingState.Idle -> current.copy(composer = updatedComposer)
-            is MessagingState.LoadingHistory -> current.copy(composer = updatedComposer)
-            is MessagingState.Ready -> current.copy(composer = updatedComposer)
-            is MessagingState.Recovering -> current.copy(composer = updatedComposer)
-            is MessagingState.Sending -> current.copy(composer = updatedComposer)
+        mutableState.update { current ->
+            val updatedComposer = current.composer.copy(
+                draft = current.composer.draft.copy(priority = priority),
+            )
+            when (current) {
+                is MessagingState.Blocked -> current.copy(composer = updatedComposer)
+                is MessagingState.Idle -> current.copy(composer = updatedComposer)
+                is MessagingState.LoadingHistory -> current.copy(composer = updatedComposer)
+                is MessagingState.Ready -> current.copy(composer = updatedComposer)
+                is MessagingState.Recovering -> current.copy(composer = updatedComposer)
+                is MessagingState.Sending -> current.copy(composer = updatedComposer)
+            }
         }
     }
 
@@ -104,6 +106,6 @@ class MessagingViewModel(
     }
 
     private fun mutate(mutation: MessagingMutation) {
-        mutableState.value = MessagingReducer.reduce(mutableState.value, mutation)
+        mutableState.update { current -> MessagingReducer.reduce(current, mutation) }
     }
 }

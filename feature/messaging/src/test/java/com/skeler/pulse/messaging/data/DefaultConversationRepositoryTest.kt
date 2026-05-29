@@ -30,6 +30,30 @@ import java.time.Instant
 
 class DefaultConversationRepositoryTest {
     @Test
+    fun `observed inbox uses epoch timestamp when envelope timestamps are absent`() = runTest {
+        val repository = DefaultConversationRepository(
+            encryptedMessageStore = FakeEncryptedMessageStore(
+                envelopes = listOf(
+                    envelope(
+                        lastFailureCode = null,
+                        sentAtEpochMillis = null,
+                        receivedAtEpochMillis = null,
+                        completedAtEpochMillis = null,
+                    )
+                )
+            ),
+            messageProtector = UnusedMessageProtector,
+            businessComplianceProvider = StaticBusinessComplianceProvider(
+                statuses = mapOf("conv-1" to BusinessComplianceStatus())
+            ),
+        )
+
+        val summary = repository.observeInbox().first().single()
+
+        assertEquals(Instant.EPOCH, summary.timestamp)
+    }
+
+    @Test
     fun `maps auth sync failure into explicit row and delivery diagnostics`() = runTest {
         val repository = DefaultConversationRepository(
             encryptedMessageStore = FakeEncryptedMessageStore(
@@ -154,8 +178,11 @@ class DefaultConversationRepositoryTest {
 
     private fun envelope(
         conversationId: String = "conv-1",
-        lastFailureCode: String,
+        lastFailureCode: String?,
         nextRetryAtEpochMillis: Long? = null,
+        sentAtEpochMillis: Long? = 1_000L,
+        receivedAtEpochMillis: Long? = null,
+        completedAtEpochMillis: Long? = null,
     ): PersistedMessageEnvelope = PersistedMessageEnvelope(
         schemaVersion = 1,
         messageId = "message-1",
@@ -165,8 +192,8 @@ class DefaultConversationRepositoryTest {
         bodyInitializationVector = "iv",
         bodyPreview = "",
         payloadStoragePolicy = PayloadStoragePolicy.CiphertextOnly,
-        sentAtEpochMillis = 1_000L,
-        receivedAtEpochMillis = null,
+        sentAtEpochMillis = sentAtEpochMillis,
+        receivedAtEpochMillis = receivedAtEpochMillis,
         sync = PersistedSyncEnvelope(
             schemaVersion = 1,
             queueKey = conversationId,
@@ -175,6 +202,7 @@ class DefaultConversationRepositoryTest {
             maxAttempts = 5,
             nextRetryAtEpochMillis = nextRetryAtEpochMillis,
             lastFailureCode = lastFailureCode,
+            completedAtEpochMillis = completedAtEpochMillis,
         ),
     )
 

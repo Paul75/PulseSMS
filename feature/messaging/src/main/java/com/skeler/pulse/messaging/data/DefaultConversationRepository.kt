@@ -303,12 +303,12 @@ class DefaultConversationRepository(
         SendBlockReason.Offline -> "Outbound business messaging is offline"
     }
 
-    private fun PersistedMessageEnvelope.primaryTimestamp(): Instant? =
+    private fun PersistedMessageEnvelope.primaryTimestamp(): Instant =
         listOfNotNull(
             sync.completedAtEpochMillis,
             receivedAtEpochMillis,
             sentAtEpochMillis,
-        ).maxOrNull()?.let(Instant::ofEpochMilli)
+        ).maxOrNull()?.let(Instant::ofEpochMilli) ?: Instant.EPOCH
 
     private fun PersistedMessageEnvelope.previewLabel(): String =
         bodyPreview.ifBlank { "Encrypted message" }
