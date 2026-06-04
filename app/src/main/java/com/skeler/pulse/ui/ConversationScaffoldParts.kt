@@ -24,15 +24,18 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.skeler.pulse.R
+import com.skeler.pulse.contact.contactPhotoUriFor
 import com.skeler.pulse.design.component.SerafinaAvatar
 import com.skeler.pulse.design.component.StatusPill
 import com.skeler.pulse.design.util.motionAnimateItemModifier
@@ -53,6 +56,8 @@ internal fun ConversationTopBar(
     onBack: () -> Unit,
     onCallAddress: () -> Unit,
 ) {
+    val context = LocalContext.current
+    val photoUri = remember(address) { contactPhotoUriFor(context, address) }
     val hasUnreadMessages = unreadCount > 0
     val colors = MaterialTheme.colorScheme
     val topBarChromeContainerColor = conversationTopBarChromeContainerColor(hasUnreadMessages)
@@ -86,7 +91,7 @@ internal fun ConversationTopBar(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     SerafinaAvatar(
-                        imageUrl = null,
+                        imageUrl = photoUri?.toString(),
                         initials = title.toAvatarInitials(),
                         hasUnread = hasUnreadMessages,
                         size = 42.dp,

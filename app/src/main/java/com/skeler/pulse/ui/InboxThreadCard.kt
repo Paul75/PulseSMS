@@ -93,6 +93,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.skeler.pulse.InboxAccessState
 import com.skeler.pulse.contact.displayNameFor
+import com.skeler.pulse.contact.contactPhotoUriFor
 import com.skeler.pulse.design.component.SerafinaAvatar
 import com.skeler.pulse.design.component.SerafinaProgressIndicator
 import com.skeler.pulse.design.util.elasticOverscroll
@@ -124,6 +125,7 @@ internal fun SmsThreadCard(
     val reducedMotion = rememberReducedMotionEnabled()
     val displayName = remember(thread.address) { displayNameFor(context, thread.address) }
     val initials = displayName.toAvatarInitials()
+    val photoUri = remember(thread.address) { contactPhotoUriFor(context, thread.address) }
     val hasUnread = thread.unreadCount > 0
     var shouldShowDeleteConfirmation by rememberSaveable(thread.threadId, thread.address) {
         mutableStateOf(false)
@@ -201,7 +203,7 @@ internal fun SmsThreadCard(
                     .padding(horizontal = 16.dp, vertical = 14.dp),
                 horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically,
             ) {
-                SerafinaAvatar(imageUrl = null, initials = initials, hasUnread = hasUnread, size = 48.dp)
+                SerafinaAvatar(imageUrl = photoUri?.toString(), initials = initials, hasUnread = hasUnread, size = 48.dp)
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),

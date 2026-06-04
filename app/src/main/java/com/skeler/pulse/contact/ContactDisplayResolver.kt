@@ -14,6 +14,12 @@ private val displayNameCache: MutableMap<String, String> = Collections.synchroni
     }
 )
 
+private val photoUriCache: MutableMap<String, Uri?> = Collections.synchronizedMap(
+    object : LinkedHashMap<String, Uri?>(64, 0.75f, true) {
+        override fun removeEldestEntry(eldest: Map.Entry<String, Uri?>): Boolean = size > 500
+    }
+)
+
 internal fun displayNameFor(context: Context, address: String): String {
     val trimmedAddress = address.trim()
     val normalizedAddress = trimmedAddress.normalizeAddressForDisplay()
@@ -30,6 +36,38 @@ internal fun displayNameFor(context: Context, address: String): String {
 
     displayNameCache[normalizedAddress] = displayName
     return displayName
+}
+
+internal fun contactPhotoUriFor(context: Context, address: String): Uri? {
+    val trimmedAddress = address.trim()
+    val normalizedAddress = trimmedAddress.normalizeAddressForDisplay()
+    if (normalizedAddress.isBlank()) return null
+
+    photoUriCache[normalizedAddress]?.let { return it }
+
+    val lookupUri = Uri.withAppendedPath(
+        ContactsContract.PhoneLookup.CONTENT_FILTER_URI,
+        Uri.encode(normalizedAddress),
+    )
+    val photoUri = try {
+        context.contentResolver.query(
+            lookupUri,
+            arrayOf(ContactsContract.PhoneLookup.PHOTO_THUMBNAIL_URI),
+            null,
+            null,
+            null,
+        )?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                cursor.getString(0)?.trim()?.takeIf(String::isNotBlank)?.let(Uri::parse)
+            } else {
+                null
+            }
+        }
+    } catch (_: SecurityException) {
+        null
+    }
+    photoUriCache[normalizedAddress] = photoUri
+    return photoUri
 }
 
 internal fun String.normalizeAddressForDisplay(): String {
