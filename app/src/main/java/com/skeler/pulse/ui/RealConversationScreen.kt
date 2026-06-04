@@ -67,6 +67,7 @@ internal fun RealConversationScreen(
     onClearSendState: () -> Unit,
     onDraftConsumed: () -> Unit,
     onDeleteMessage: (Long) -> Unit,
+    onDeleteMessages: (List<Long>) -> Unit,
     onBlockConversation: () -> Unit,
     onForwardMessage: (String) -> Unit,
     onCallAddress: () -> Unit,
@@ -150,10 +151,8 @@ internal fun RealConversationScreen(
     val importantCount = remember(messages, importantMessageIds) {
         messages.count { it.id in importantMessageIds }
     }
-    var contextMenuMessageId by rememberSaveable(address) { mutableStateOf<Long?>(null) }
-    val contextMenuMessage = remember(messages, contextMenuMessageId) {
-        messages.firstOrNull { it.id == contextMenuMessageId }
-    }
+    var selectedMessageIds by remember { mutableStateOf<Set<Long>>(emptySet()) }
+    var showDeleteSelectedDialog by remember { mutableStateOf(false) }
     val clipboardMessageLabel = stringResource(R.string.conversation_clipboard_message_label)
     val clipboardCodeLabel = stringResource(R.string.conversation_clipboard_code_label)
     val clipboardManager = remember(context) {
@@ -178,7 +177,9 @@ internal fun RealConversationScreen(
     }
 
     BackHandler {
-        if (shouldShowDiscardDraftDialog) {
+        if (selectedMessageIds.isNotEmpty()) {
+            selectedMessageIds = emptySet()
+        } else if (shouldShowDiscardDraftDialog) {
             shouldShowDiscardDraftDialog = false
         } else {
             requestBackNavigation()
@@ -240,21 +241,62 @@ internal fun RealConversationScreen(
         )
     }
 
+    if (showDeleteSelectedDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteSelectedDialog = false },
+            title = { Text("Delete messages") },
+            text = { Text("Delete ${selectedMessageIds.size} selected message${if (selectedMessageIds.size > 1) "s" else ""}?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onDeleteMessages(selectedMessageIds.toList())
+                        selectedMessageIds = emptySet()
+                        showDeleteSelectedDialog = false
+                    },
+                ) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteSelectedDialog = false }) {
+                    Text("Cancel")
+                }
+            },
+        )
+    }
+
     Scaffold(
         modifier = modifier
             .background(conversationBackdropBrush),
         containerColor = Color.Transparent,
         topBar = {
-            ConversationTopBar(
-                title = title,
-                address = address,
-                messages = messages,
-                unreadCount = unreadCount,
-                importantCount = importantCount,
-                avatarColors = conversationAvatarColors,
-                onBack = ::requestBackNavigation,
-                onCallAddress = onCallAddress,
-            )
+            if (selectedMessageIds.isNotEmpty()) {
+                ConversationSelectionTopBar(
+                    selectedCount = selectedMessageIds.size,
+                    onClose = { selectedMessageIds = emptySet() },
+                    onCopy = {
+                        val selectedMessages = messages.filter { it.id in selectedMessageIds }
+                        val text = selectedMessages.joinToString("\n\n") { it.body }
+                        if (text.isNotEmpty()) {
+                            clipboardManager?.setPrimaryClip(
+                                ClipData.newPlainText(clipboardMessageLabel, text)
+                            )
+                        }
+                    },
+                    onDelete = { showDeleteSelectedDialog = true },
+                )
+            } else {
+                ConversationTopBar(
+                    title = title,
+                    address = address,
+                    messages = messages,
+                    unreadCount = unreadCount,
+                    importantCount = importantCount,
+                    avatarColors = conversationAvatarColors,
+                    onBack = ::requestBackNavigation,
+                    onCallAddress = onCallAddress,
+                )
+            }
         },
         bottomBar = {
             ConversationBottomBar(
@@ -314,33 +356,17 @@ internal fun RealConversationScreen(
                     loading = loading,
                     timelineItems = timelineItems,
                     importantMessageIds = importantMessageIds,
-                    contextMenuMessageId = contextMenuMessageId,
+                    selectedMessageIds = selectedMessageIds,
                     reducedMotion = reducedMotion,
-                    onToggleContextMenu = { messageId ->
-                        contextMenuMessageId = if (contextMenuMessageId == messageId) null else messageId
-                    },
-                    onDismissMenu = { contextMenuMessageId = null },
-                    onCopy = { message ->
-                        clipboardManager?.setPrimaryClip(
-                            ClipData.newPlainText(clipboardMessageLabel, message.body)
-                        )
-                        contextMenuMessageId = null
-                    },
                     onCopyCode = { code ->
                         clipboardManager?.setPrimaryClip(ClipData.newPlainText(clipboardCodeLabel, code))
-                        contextMenuMessageId = null
                     },
-                    onDelete = { message ->
-                        onDeleteMessage(message.id)
-                        contextMenuMessageId = null
-                    },
-                    onBlock = {
-                        onBlockConversation()
-                        contextMenuMessageId = null
-                    },
-                    onForward = { message ->
-                        onForwardMessage(message.body)
-                        contextMenuMessageId = null
+                    onToggleMessageSelection = { messageId ->
+                        selectedMessageIds = if (messageId in selectedMessageIds) {
+                            selectedMessageIds - messageId
+                        } else {
+                            selectedMessageIds + messageId
+                        }
                     },
                 )
             }

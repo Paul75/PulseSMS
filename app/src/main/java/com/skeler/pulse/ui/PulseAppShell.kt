@@ -249,6 +249,7 @@ fun PulseAppShell(
                         onClearSendState = smsViewModel::clearSendState,
                         onDraftConsumed = { conversationDraftSeed = "" },
                         onDeleteMessage = smsViewModel::deleteMessage,
+                        onDeleteMessages = smsViewModel::deleteMessages,
                         onBlockConversation = {
                             smsViewModel.blockThread(activeAddress)
                             smsViewModel.closeConversation()

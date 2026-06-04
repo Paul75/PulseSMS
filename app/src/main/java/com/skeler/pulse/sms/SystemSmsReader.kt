@@ -225,6 +225,12 @@ class SystemSmsReader(
         )
     }
 
+    fun deleteMessages(messageIds: List<Long>) {
+        if (messageIds.isEmpty()) return
+        val (selection, selectionArgs) = messageIds.toIdSelection()
+        contentResolver.delete(Telephony.Sms.CONTENT_URI, selection, selectionArgs)
+    }
+
     private fun resolveSmsIds(
         threadId: Long?,
         address: String,

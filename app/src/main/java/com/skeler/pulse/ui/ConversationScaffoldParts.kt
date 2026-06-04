@@ -21,6 +21,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -41,6 +42,10 @@ import com.skeler.pulse.design.component.StatusPill
 import com.skeler.pulse.design.util.motionAnimateItemModifier
 import com.skeler.pulse.design.util.rememberEntranceModifier
 import com.skeler.pulse.sms.SystemSms
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material3.IconButton
 
 private val ConversationCallButtonSize = 36.dp
 
@@ -207,15 +212,10 @@ internal fun LazyListScope.conversationTimelineItems(
     loading: Boolean,
     timelineItems: List<ConversationTimelineItem>,
     importantMessageIds: Set<Long>,
-    contextMenuMessageId: Long?,
+    selectedMessageIds: Set<Long>,
     reducedMotion: Boolean,
-    onToggleContextMenu: (Long) -> Unit,
-    onDismissMenu: () -> Unit,
-    onCopy: (SystemSms) -> Unit,
     onCopyCode: (String) -> Unit,
-    onDelete: (SystemSms) -> Unit,
-    onBlock: () -> Unit,
-    onForward: (SystemSms) -> Unit,
+    onToggleMessageSelection: (Long) -> Unit,
 ) {
     item(
         key = "conversation_header",
@@ -266,14 +266,11 @@ internal fun LazyListScope.conversationTimelineItems(
                 is ConversationTimelineItem.Message -> ConversationMessageBubble(
                     message = item.message,
                     isImportant = item.message.id in importantMessageIds,
-                    isContextMenuOpen = contextMenuMessageId == item.message.id,
-                    onLongPress = { onToggleContextMenu(item.message.id) },
-                    onDismissMenu = onDismissMenu,
-                    onCopy = { onCopy(item.message) },
+                    isSelected = item.message.id in selectedMessageIds,
+                    isSelectionMode = selectedMessageIds.isNotEmpty(),
+                    onLongPress = { onToggleMessageSelection(item.message.id) },
                     onCopyCode = onCopyCode,
-                    onDelete = { onDelete(item.message) },
-                    onBlock = onBlock,
-                    onForward = { onForward(item.message) },
+                    onToggleSelection = { onToggleMessageSelection(item.message.id) },
                     modifier = motionAnimateItemModifier(reducedMotion)
                         .then(rememberEntranceModifier(item.key, reducedMotion)),
                 )
@@ -320,4 +317,45 @@ private fun ConversationUnreadDivider(
             contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
         )
     }
+}
+
+@Composable
+@OptIn(ExperimentalMaterial3Api::class)
+internal fun ConversationSelectionTopBar(
+    selectedCount: Int,
+    onClose: () -> Unit,
+    onCopy: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    CenterAlignedTopAppBar(
+        title = { Text("$selectedCount selected") },
+        navigationIcon = {
+            IconButton(onClick = onClose) {
+                Icon(
+                    imageVector = Icons.Rounded.Close,
+                    contentDescription = "Close selection",
+                )
+            }
+        },
+        actions = {
+            if (selectedCount >= 1) {
+                IconButton(onClick = onCopy) {
+                    Icon(
+                        imageVector = Icons.Rounded.ContentCopy,
+                        contentDescription = "Copy message",
+                    )
+                }
+            }
+            IconButton(onClick = onDelete) {
+                Icon(
+                    imageVector = Icons.Rounded.Delete,
+                    contentDescription = "Delete selected",
+                    tint = MaterialTheme.colorScheme.error,
+                )
+            }
+        },
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        ),
+    )
 }

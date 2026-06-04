@@ -64,6 +64,8 @@ import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.SimCard
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
@@ -138,14 +140,11 @@ import java.time.Instant
 internal fun ConversationMessageBubble(
     message: SystemSms,
     isImportant: Boolean,
-    isContextMenuOpen: Boolean,
+    isSelected: Boolean,
+    isSelectionMode: Boolean,
     onLongPress: () -> Unit,
-    onDismissMenu: () -> Unit,
-    onCopy: () -> Unit,
     onCopyCode: (String) -> Unit,
-    onDelete: () -> Unit,
-    onBlock: () -> Unit,
-    onForward: () -> Unit,
+    onToggleSelection: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val reducedMotion = rememberReducedMotionEnabled()
@@ -162,19 +161,19 @@ internal fun ConversationMessageBubble(
         bottomEnd = if (isOutbound) 10.dp else 24.dp,
     )
     val bubbleScale by animateFloatAsState(
-        targetValue = if (isPressed || isContextMenuOpen) 0.985f else 1f,
+        targetValue = if (isPressed) 0.985f else 1f,
         animationSpec = conversationPressAnimationSpec(reducedMotion),
         label = "message_bubble_press_scale",
     )
     val bubbleElevation by animateDpAsState(
-        targetValue = if (isContextMenuOpen) 6.dp else if (isPressed) 2.dp else if (isOutbound) 0.dp else 1.dp,
+        targetValue = if (isPressed) 2.dp else if (isOutbound) 0.dp else 1.dp,
         animationSpec = conversationPressAnimationSpec(reducedMotion),
         label = "message_bubble_press_elevation",
     )
     val bubbleOutlineColor by animateColorAsState(
         targetValue = when {
+            isSelected -> colors.primary.copy(alpha = 0.8f)
             hasFailedDelivery -> colors.error.copy(alpha = ConversationVisualTokens.failedBubbleOutlineAlpha)
-            isContextMenuOpen -> colors.primary.copy(alpha = ConversationVisualTokens.activeBubbleOutlineAlpha)
             isPressed -> colors.primary.copy(alpha = ConversationVisualTokens.pressedBubbleOutlineAlpha)
             isUnread -> colors.tertiary.copy(alpha = ConversationVisualTokens.unreadBubbleOutlineAlpha)
             else -> conversationRestingBubbleOutlineColor(colors, isOutbound)
@@ -202,10 +201,27 @@ internal fun ConversationMessageBubble(
     }
     val copyableCode = remember(message.body) { copyableMessageCode(message.body) }
 
+    val onClickAction: () -> Unit = if (isSelectionMode) ({ onToggleSelection() }) else ({})
+    val onLongClickAction: (() -> Unit)? = if (isSelectionMode) ({ onToggleSelection() }) else onLongPress
+
     Row(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = if (isOutbound) Arrangement.End else Arrangement.Start,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
+        if (isSelectionMode) {
+            Checkbox(
+                checked = isSelected,
+                onCheckedChange = { onToggleSelection() },
+                colors = CheckboxDefaults.colors(
+                    uncheckedColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                ),
+            )
+            if (isOutbound) {
+                Spacer(modifier = Modifier.weight(1f))
+            }
+        } else if (isOutbound) {
+            Spacer(modifier = Modifier.weight(1f))
+        }
         Box(
             modifier = Modifier
                 .widthIn(max = ConversationVisualTokens.messageMaxWidth)
@@ -216,8 +232,8 @@ internal fun ConversationMessageBubble(
                 .combinedClickable(
                     interactionSource = interactionSource,
                     indication = null,
-                    onClick = {},
-                    onLongClick = onLongPress,
+                    onClick = onClickAction,
+                    onLongClick = onLongClickAction,
                 ),
         ) {
             Column(
@@ -283,38 +299,10 @@ internal fun ConversationMessageBubble(
                     )
                 }
             }
+        }
 
-            SerafinaContextMenu(
-                expanded = isContextMenuOpen,
-                onDismissRequest = onDismissMenu,
-                shadowElevation = 0.dp,
-            ) {
-                SerafinaContextMenuItem(
-                    text = stringResource(R.string.conversation_action_copy),
-                    icon = Icons.Rounded.ContentCopy,
-                    onClick = onCopy,
-                )
-                SerafinaContextMenuItem(
-                    text = stringResource(R.string.conversation_action_forward),
-                    icon = Icons.AutoMirrored.Rounded.ArrowForward,
-                    onClick = onForward,
-                )
-                if (shouldShowMessageBlockAction(isOutbound)) {
-                    SerafinaContextMenuItem(
-                        text = stringResource(R.string.conversation_action_block),
-                        icon = Icons.Rounded.Block,
-                        contentColor = MaterialTheme.colorScheme.error,
-                        onClick = onBlock,
-                    )
-                }
-                SerafinaContextMenuDivider()
-                SerafinaContextMenuItem(
-                    text = stringResource(R.string.conversation_action_delete),
-                    icon = Icons.Rounded.Delete,
-                    contentColor = MaterialTheme.colorScheme.error,
-                    onClick = onDelete,
-                )
-            }
+        if (isSelectionMode && !isOutbound) {
+            Spacer(modifier = Modifier.weight(1f))
         }
     }
 }

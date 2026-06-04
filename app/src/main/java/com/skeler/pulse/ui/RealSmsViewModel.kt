@@ -315,6 +315,12 @@ class RealSmsViewModel(
         }
     }
 
+    fun deleteMessages(messageIds: List<Long>) {
+        viewModelScope.launch {
+            smsReader.deleteMessages(messageIds)
+        }
+    }
+
     override fun onCleared() {
         inboxJob?.cancel()
         conversationJob?.cancel()
