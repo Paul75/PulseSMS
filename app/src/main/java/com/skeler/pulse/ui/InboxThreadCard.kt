@@ -44,6 +44,7 @@ import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.HourglassTop
 import androidx.compose.material.icons.rounded.Key
 import androidx.compose.material.icons.rounded.MarkunreadMailbox
+import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.AlertDialog
@@ -94,7 +95,6 @@ import com.skeler.pulse.InboxAccessState
 import com.skeler.pulse.contact.displayNameFor
 import com.skeler.pulse.design.component.SerafinaAvatar
 import com.skeler.pulse.design.component.SerafinaProgressIndicator
-import com.skeler.pulse.design.component.StatusPill
 import com.skeler.pulse.design.util.elasticOverscroll
 import com.skeler.pulse.design.util.motionAnimateItemModifier
 import com.skeler.pulse.design.util.rememberEntranceModifier
@@ -214,13 +214,6 @@ internal fun SmsThreadCard(
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
-                        if (isPinned) {
-                            StatusPill(
-                                label = "Pinned",
-                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                            )
-                        }
                     }
                     Text(
                         text = thread.snippet,
@@ -235,7 +228,15 @@ internal fun SmsThreadCard(
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
-                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    if (isPinned) {
+                        Icon(
+                            imageVector = Icons.Rounded.PushPin,
+                            contentDescription = "Pinned",
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    }
                     Text(
                         text = thread.timestamp.toInboxTimestamp(),
                         style = MaterialTheme.typography.labelMedium,
