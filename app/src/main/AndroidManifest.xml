@@ -85,6 +85,11 @@
             </intent-filter>
         </activity>
 
+        <!-- Notification action handler — mark read / delete from notification -->
+        <receiver
+            android:name=".sms.SmsNotificationActionReceiver"
+            android:exported="false" />
+
         <!-- 4. Respond Via Message — quick reply from incoming call screen -->
         <service
             android:name=".sms.RespondViaMessageService"

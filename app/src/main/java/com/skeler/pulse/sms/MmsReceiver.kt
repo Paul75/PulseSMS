@@ -2,6 +2,7 @@ package com.skeler.pulse.sms
 
 import android.content.BroadcastReceiver
 import android.content.ContentValues
+import android.content.ContentUris
 import android.content.Context
 import android.content.Intent
 import android.provider.Telephony
@@ -30,21 +31,27 @@ class MmsReceiver : BroadcastReceiver() {
 
         Thread {
             try {
-                val sender = "MMS"
-                val body = "New multimedia message received"
-                val persistedUri = writeMmsPlaceholderToProvider(context, sender, body)
-                if (persistedUri != null) {
-                    SmsNotificationHelper.notifyIncomingSms(
-                        context = context,
-                        sender = sender,
-                        body = body,
-                    )
-                } else {
-                    SmsNotificationHelper.notifyIncomingSms(
-                        context = context,
-                        sender = sender,
-                        body = "New multimedia message received, but Pulse couldn't save it yet.",
-                    )
+                try {
+                    val sender = "MMS"
+                    val body = "New multimedia message received"
+                    val persistedUri = writeMmsPlaceholderToProvider(context, sender, body)
+                    if (persistedUri != null) {
+                        val messageId = ContentUris.parseId(persistedUri)
+                        SmsNotificationHelper.notifyIncomingSms(
+                            context = context,
+                            sender = sender,
+                            body = body,
+                            messageId = messageId,
+                        )
+                    } else {
+                        SmsNotificationHelper.notifyIncomingSms(
+                            context = context,
+                            sender = sender,
+                            body = "New multimedia message received, but Pulse couldn't save it yet.",
+                        )
+                    }
+                } catch (e: Exception) {
+                    Log.e("MmsReceiver", "Unhandled exception processing incoming MMS", e)
                 }
             } finally {
                 pendingResult.finish()

@@ -8,6 +8,7 @@ import android.net.Uri
 import android.provider.Telephony
 import android.telephony.SmsMessage
 import android.util.Log
+import android.content.ContentUris
 
 /**
  * BroadcastReceiver for incoming SMS messages.
@@ -35,25 +36,30 @@ class SmsReceiver : BroadcastReceiver() {
 
         Thread {
             try {
-                // Group message parts by sender (multi-part SMS)
-                val grouped = messages.groupBy { it.originatingAddress ?: "Unknown" }
+                try {
+                    // Group message parts by sender (multi-part SMS)
+                    val grouped = messages.groupBy { it.originatingAddress ?: "Unknown" }
 
-                for ((sender, parts) in grouped) {
-                    val body = parts.joinToString("") { it.messageBody ?: "" }
-                    if (body.isBlank()) continue
+                    for ((sender, parts) in grouped) {
+                        val body = parts.joinToString("") { it.messageBody ?: "" }
+                        if (body.isBlank()) continue
 
-                    OtpClipboardAutoCopy.copyIncomingCodeIfEnabled(context, body)
+                        OtpClipboardAutoCopy.copyIncomingCodeIfEnabled(context, body)
 
-                    val persistedUri = writeSmsToProvider(context, sender, body, parts.first())
-                    if (persistedUri != null) {
-                        SmsNotificationHelper.notifyIncomingSms(context, sender, body)
-                    } else {
-                        SmsNotificationHelper.notifyIncomingSms(
-                            context = context,
-                            sender = sender,
-                            body = "New message received, but Pulse couldn't save it yet.",
-                        )
+                        val persistedUri = writeSmsToProvider(context, sender, body, parts.first())
+                        if (persistedUri != null) {
+                            val messageId = ContentUris.parseId(persistedUri)
+                            SmsNotificationHelper.notifyIncomingSms(context, sender, body, messageId)
+                        } else {
+                            SmsNotificationHelper.notifyIncomingSms(
+                                context = context,
+                                sender = sender,
+                                body = "New message received, but Pulse couldn't save it yet.",
+                            )
+                        }
                     }
+                } catch (e: Exception) {
+                    Log.e("SmsReceiver", "Unhandled exception processing incoming SMS", e)
                 }
             } finally {
                 pendingResult.finish()
