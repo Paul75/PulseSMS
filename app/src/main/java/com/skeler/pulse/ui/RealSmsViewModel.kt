@@ -19,77 +19,6 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
-internal fun List<SystemSms>.hasUnreadInboundMessages(): Boolean = any { message ->
-    message.isInbound && !message.read
-}
-
-internal fun String.isReplyableConversationAddress(): Boolean = none(Char::isLetter)
-
-private fun SystemSms.asReadIfInbound(): SystemSms = if (isInbound && !read) {
-    copy(read = true)
-} else {
-    this
-}
-
-private fun SmsThread.asRead(): SmsThread = if (unreadCount > 0) {
-    copy(unreadCount = 0)
-} else {
-    this
-}
-
-internal fun SmsThread.matchesReadTarget(target: ReadConversationTarget): Boolean = when {
-    threadId == target.threadId -> true
-    target.threadId == null && address.equals(target.address, ignoreCase = false) -> true
-    else -> false
-}
-
-internal fun SmsThread.isBlockedBy(blockedAddresses: Set<String>): Boolean =
-    address.toBlockedSenderKeyOrNull()
-        ?.let { threadKey -> blockedAddresses.any { blockedKey -> blockedKey.matchesBlockedSenderKey(threadKey) } }
-        ?: false
-
-internal fun List<SmsThread>.withoutBlockedAddresses(blockedAddresses: Set<String>): List<SmsThread> =
-    filterNot { thread -> thread.isBlockedBy(blockedAddresses) }
-
-/**
- * State for the real SMS inbox, reading from [SystemSmsReader].
- */
-data class RealInboxState(
-    val threads: List<SmsThread> = emptyList(),
-    val archivedThreads: List<SmsThread> = emptyList(),
-    val pinnedThreadIds: Set<Long> = emptySet(),
-    val archivedThreadIds: Set<Long> = emptySet(),
-    val blockedAddresses: Set<String> = emptySet(),
-    val loading: Boolean = true,
-    val showLoadingCard: Boolean = false,
-    val permissionDenied: Boolean = false,
-    val isDefaultSmsApp: Boolean = true,
-    val errorMessage: String? = null,
-)
-
-internal data class ReadConversationTarget(
-    val address: String,
-    val threadId: Long?,
-)
-
-/**
- * State for a single conversation's messages.
- */
-data class RealConversationState(
-    val address: String = "",
-    val messages: List<SystemSms> = emptyList(),
-    val loading: Boolean = true,
-    val importantMessageIds: Set<Long> = emptySet(),
-    val isReplyable: Boolean = true,
-)
-
-sealed interface SendState {
-    data object Idle : SendState
-    data class Sending(val body: String) : SendState
-    data class Sent(val body: String) : SendState
-    data class Failed(val body: String) : SendState
-}
-
 private data class PendingSendRequest(
     val address: String,
     val body: String,
@@ -284,6 +213,7 @@ class RealSmsViewModel(
     fun sendMessage(address: String, body: String, subscriptionId: Int? = null) {
         val trimmedBody = body.trim()
         if (trimmedBody.isBlank()) return
+        if (!shouldStartSmsSend(_sendState.value)) return
 
         val request = PendingSendRequest(
             address = address,

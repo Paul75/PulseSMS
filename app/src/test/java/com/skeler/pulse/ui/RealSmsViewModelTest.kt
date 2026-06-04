@@ -18,4 +18,14 @@ class RealSmsViewModelTest {
         assertEquals(true, state.isDefaultSmsApp)
         assertEquals(false, state.loading)
     }
+
+    @Test
+    fun `send should not start while another sms send is active`() {
+        assertEquals(false, shouldStartSmsSend(SendState.Sending("hello")))
+    }
+
+    @Test
+    fun `send can start when no sms send is active`() {
+        assertEquals(true, shouldStartSmsSend(SendState.Idle))
+    }
 }

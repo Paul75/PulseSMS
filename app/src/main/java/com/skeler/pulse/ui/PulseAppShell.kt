@@ -1,5 +1,10 @@
 package com.skeler.pulse.ui
 
+import android.content.ActivityNotFoundException
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ContentTransform
@@ -32,81 +37,6 @@ import com.skeler.pulse.design.util.rememberReducedMotionEnabled
 import com.skeler.pulse.security.auth.checkBiometricAvailability
 import com.skeler.pulse.shouldHandleOpenNewChatRequest
 
-private const val DESTINATION_INBOX = "inbox"
-private const val DESTINATION_NEW_CHAT = "new_chat"
-private const val DESTINATION_CONVERSATION = "conversation"
-private const val DESTINATION_SETTINGS = "settings"
-private const val DESTINATION_ARCHIVED = "archived"
-private const val DESTINATION_SECURITY = "security"
-private const val DESTINATION_BLOCKED_NUMBERS = "blocked_numbers"
-private const val DESTINATION_LOCK = "lock"
-private const val SCREEN_TRANSITION_DURATION_MILLIS = 180
-private const val SCREEN_TRANSITION_EXIT_DURATION_MILLIS = 120
-
-private fun screenDepth(destination: String): Int = when (destination) {
-    DESTINATION_INBOX -> 0
-    DESTINATION_NEW_CHAT,
-    DESTINATION_SETTINGS,
-    DESTINATION_ARCHIVED -> 1
-    DESTINATION_CONVERSATION,
-    DESTINATION_SECURITY,
-    DESTINATION_BLOCKED_NUMBERS,
-    DESTINATION_LOCK -> 2
-    else -> 0
-}
-
-private fun screenTransition(
-    initialState: String,
-    targetState: String,
-    reducedMotion: Boolean,
-): ContentTransform {
-    if (reducedMotion) {
-        return ContentTransform(
-            targetContentEnter = fadeIn(tween(durationMillis = 0)),
-            initialContentExit = fadeOut(tween(durationMillis = 0)),
-            sizeTransform = null,
-        )
-    }
-
-    val forward = screenDepth(targetState) >= screenDepth(initialState)
-    val enterOffset: (Int) -> Int = { width -> if (forward) width / 5 else -width / 5 }
-    val exitOffset: (Int) -> Int = { width -> if (forward) -width / 8 else width / 8 }
-
-    val enterTransition =
-        slideInHorizontally(
-            animationSpec = tween(
-                durationMillis = SCREEN_TRANSITION_DURATION_MILLIS,
-                easing = FastOutSlowInEasing,
-            ),
-            initialOffsetX = enterOffset,
-        ) + fadeIn(
-            animationSpec = tween(
-                durationMillis = SCREEN_TRANSITION_EXIT_DURATION_MILLIS,
-                easing = FastOutSlowInEasing,
-            ),
-        )
-
-    val exitTransition =
-        slideOutHorizontally(
-            animationSpec = tween(
-                durationMillis = SCREEN_TRANSITION_EXIT_DURATION_MILLIS,
-                easing = LinearOutSlowInEasing,
-            ),
-            targetOffsetX = exitOffset,
-        ) + fadeOut(
-            animationSpec = tween(
-                durationMillis = SCREEN_TRANSITION_EXIT_DURATION_MILLIS,
-                easing = LinearOutSlowInEasing,
-            ),
-        )
-
-    return ContentTransform(
-        targetContentEnter = enterTransition,
-        initialContentExit = exitTransition,
-        sizeTransform = null,
-    )
-}
-
 @Composable
 fun PulseAppShell(
     smsViewModel: RealSmsViewModel,
@@ -135,6 +65,11 @@ fun PulseAppShell(
     val context = LocalContext.current
     val shellThemeState by themeViewModel.state.collectAsState()
     val currentScreen = backStack.lastOrNull() ?: DESTINATION_INBOX
+    val isShowingInboxAccessGate = shouldShowInboxAccessGate(
+        accessState = accessState,
+        isLockScreen = currentScreen == DESTINATION_LOCK,
+    )
+    val renderedScreen = if (isShowingInboxAccessGate) DESTINATION_INBOX else currentScreen
     val reducedMotion = rememberReducedMotionEnabled()
     val inboxListState = rememberLazyListState()
     val inboxFilterState = rememberLazyListState()
@@ -194,15 +129,17 @@ fun PulseAppShell(
         backStack = backStack.dropLast(1).ifEmpty { listOf(DESTINATION_INBOX) }
     }
 
-    BackHandler(enabled = currentScreen != DESTINATION_INBOX) {
-        if (currentScreen != DESTINATION_LOCK) {
+    BackHandler(enabled = currentScreen != DESTINATION_INBOX && !isShowingInboxAccessGate) {
+        if (currentScreen == DESTINATION_LOCK) {
+            (context as? android.app.Activity)?.finish()
+        } else {
             navigateBack()
         }
     }
 
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
         AnimatedContent(
-            targetState = currentScreen,
+            targetState = renderedScreen,
             transitionSpec = {
                 screenTransition(
                     initialState = initialState,
@@ -293,6 +230,10 @@ fun PulseAppShell(
                         } else {
                             emptySet()
                         },
+                        isReplyable = conversationReplyabilityForActiveRoute(
+                            activeAddress = activeAddress,
+                            conversationState = conversationState,
+                        ),
                         sendState = sendState,
                         onBack = {
                             navigateBack()
@@ -314,6 +255,9 @@ fun PulseAppShell(
                             pendingForwardDraft = body
                             newChatQuery = ""
                             backStack = listOf(DESTINATION_INBOX, DESTINATION_NEW_CHAT)
+                        },
+                        onCallAddress = {
+                            openDialer(context, activeAddress)
                         },
                     )
                 }
@@ -411,7 +355,16 @@ fun PulseAppShell(
     }
 }
 
+private fun openDialer(context: Context, address: String) {
+    val dialableNumber = address.toDialablePhoneNumberOrNull() ?: return
+    val dialIntent = Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", dialableNumber, null))
+    try {
+        context.startActivity(dialIntent)
+    } catch (exception: ActivityNotFoundException) {
+        Toast.makeText(context, "No call app available", Toast.LENGTH_SHORT).show()
+    }
+}
+
 // ═══════════════════════════════════════════════════════════
 // REAL SMS INBOX
 // ═══════════════════════════════════════════════════════════
-

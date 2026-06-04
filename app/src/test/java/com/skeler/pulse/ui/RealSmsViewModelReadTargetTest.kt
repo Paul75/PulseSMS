@@ -48,4 +48,19 @@ class RealSmsViewModelReadTargetTest {
 
         assertFalse(thread.matchesReadTarget(ReadConversationTarget(address = "777", threadId = null)))
     }
+
+    @Test
+    fun `should_return_true_when_address_has_no_letters`() {
+        assertTrue("+1 (555) 010-9988".isReplyableConversationAddress())
+    }
+
+    @Test
+    fun `should_return_false_when_address_is_short_code`() {
+        assertFalse("555".isReplyableConversationAddress())
+    }
+
+    @Test
+    fun `should_return_false_when_address_has_letters`() {
+        assertFalse("BANK-OTP".isReplyableConversationAddress())
+    }
 }

@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -14,21 +15,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Matrix
-import androidx.compose.ui.graphics.Outline
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.asComposePath
 import androidx.compose.ui.graphics.drawscope.clipPath
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.graphics.shapes.CornerRounding
 import androidx.graphics.shapes.Morph
@@ -40,13 +33,9 @@ import coil.compose.AsyncImage
 import com.skeler.pulse.design.theme.LocalReduceMotion
 import com.skeler.pulse.design.theme.SerafinaFullShape
 
-private val FallbackAvatarPalette = listOf(
-    Color(0xFF5CC4FF),
-    Color(0xFF64D27A),
-    Color(0xFFFFB84D),
-    Color(0xFFFF63C3),
-    Color(0xFF8D5BFF),
-    Color(0xFF7DD3B0),
+private data class SerafinaAvatarColors(
+    val containerColor: Color,
+    val contentColor: Color,
 )
 
 /**
@@ -58,7 +47,8 @@ private val FallbackAvatarPalette = listOf(
  * - If [hasUnread]: draws a `primaryContainer` 2dp stroke ring.
  *
  * Renders [imageUrl] via Coil's [AsyncImage] if non-null; otherwise
- * falls back to centered [initials] text on a `secondaryContainer` fill.
+ * falls back to centered [initials] text with caller-supplied colors,
+ * or a deterministic Material color-scheme palette when no colors are supplied.
  */
 @Composable
 fun SerafinaAvatar(
@@ -68,6 +58,8 @@ fun SerafinaAvatar(
     isTyping: Boolean = false,
     hasUnread: Boolean = false,
     size: Dp = 52.dp,
+    containerColor: Color? = null,
+    contentColor: Color? = null,
 ) {
     val reduceMotion = LocalReduceMotion.current
 
@@ -98,19 +90,10 @@ fun SerafinaAvatar(
         label = "avatar_morph",
     )
 
-    val morphShape = remember(morph) {
-        MorphShape(morph)
-    }
-
     val strokeColor = MaterialTheme.colorScheme.primaryContainer
-    val containerColor = remember(initials) {
-        FallbackAvatarPalette[initials.trim().ifBlank { "#" }.hashCode().mod(FallbackAvatarPalette.size)]
-    }
-    val textColor = if (containerColor.luminance() > 0.45f) {
-        Color(0xFF111111)
-    } else {
-        Color.White
-    }
+    val fallbackColors = MaterialTheme.colorScheme.serafinaAvatarColors(initials)
+    val resolvedContainerColor = containerColor ?: fallbackColors.containerColor
+    val resolvedContentColor = contentColor ?: fallbackColors.contentColor
 
     Box(
         modifier = modifier
@@ -128,7 +111,6 @@ fun SerafinaAvatar(
             )
             .drawWithCache {
                 // Build the morph path scaled to the component bounds
-                val morphPath = Path()
                 val androidPath = morph.toPath(progress = morphProgress)
                 val composePath = androidPath.asComposePath()
 
@@ -150,46 +132,37 @@ fun SerafinaAvatar(
             AsyncImage(
                 model = imageUrl,
                 contentDescription = null,
-                modifier = Modifier
-                    .size(size)
-                    .clip(SerafinaFullShape),
+                modifier = Modifier.size(size),
                 contentScale = ContentScale.Crop,
             )
         } else {
             Box(
                 modifier = Modifier
                     .size(size)
-                    .background(containerColor, SerafinaFullShape),
+                    .background(resolvedContainerColor, SerafinaFullShape),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = initials,
                     style = MaterialTheme.typography.titleMedium,
-                    color = textColor,
+                    color = resolvedContentColor,
                 )
             }
         }
     }
 }
 
-/**
- * A [Shape] that follows the outline of a [Morph] at a given progress.
- * This can be used for `Modifier.clip(MorphShape(...))`.
- */
-private class MorphShape(
-    private val morph: Morph,
-    private val progress: Float = 0f,
-) : Shape {
-    override fun createOutline(
-        size: Size,
-        layoutDirection: LayoutDirection,
-        density: Density,
-    ): Outline {
-        val path = morph.toPath(progress).asComposePath()
-        val matrix = Matrix()
-        matrix.scale(size.width / 2f, size.height / 2f)
-        matrix.translate(1f, 1f)
-        path.transform(matrix)
-        return Outline.Generic(path)
-    }
+private fun ColorScheme.serafinaAvatarColorPalette(): List<SerafinaAvatarColors> =
+    listOf(
+        SerafinaAvatarColors(primaryContainer, onPrimaryContainer),
+        SerafinaAvatarColors(secondaryContainer, onSecondaryContainer),
+        SerafinaAvatarColors(tertiaryContainer, onTertiaryContainer),
+        SerafinaAvatarColors(primary, onPrimary),
+        SerafinaAvatarColors(secondary, onSecondary),
+        SerafinaAvatarColors(tertiary, onTertiary),
+    )
+
+private fun ColorScheme.serafinaAvatarColors(initials: String): SerafinaAvatarColors {
+    val avatarPalette = serafinaAvatarColorPalette()
+    return avatarPalette[initials.trim().ifBlank { "#" }.hashCode().mod(avatarPalette.size)]
 }

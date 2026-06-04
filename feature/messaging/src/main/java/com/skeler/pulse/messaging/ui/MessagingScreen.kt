@@ -43,6 +43,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
@@ -78,6 +79,11 @@ private const val BOTTOM_INDEX = 0
 private const val BOTTOM_INDEX_TOLERANCE = 1
 private const val BOTTOM_OFFSET_TOLERANCE = 24
 
+internal fun isMessagingSendEnabled(state: MessagingState): Boolean =
+    state !is MessagingState.Sending &&
+        state.composer.draft.text.isNotBlank() &&
+        state.composer.eligibility is SendEligibility.Allowed
+
 @Composable
 fun MessagingScreen(
     state: MessagingState,
@@ -96,10 +102,8 @@ fun MessagingScreen(
         }
     }
 
-    val isSendEnabled by remember(state.composer.draft.text, state.composer.eligibility) {
-        derivedStateOf {
-            state.composer.draft.text.isNotBlank() && state.composer.eligibility is SendEligibility.Allowed
-        }
+    val isSendEnabled by remember(state) {
+        derivedStateOf { isMessagingSendEnabled(state) }
     }
 
     val banner by remember(state.sync, state.composer.eligibility, state.surfaceError) {
@@ -341,142 +345,3 @@ private fun MessageItem(
         }
     }
 }
-
-@Composable
-private fun MessageComposer(
-    draft: String,
-    enabled: Boolean,
-    sendEnabled: Boolean,
-    onDraftChanged: (String) -> Unit,
-    onSend: () -> Unit,
-    transition: ComposerTransition?,
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth().navigationBarsPadding().imePadding(),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalAlignment = Alignment.Bottom,
-        ) {
-            OutlinedTextField(
-                value = draft,
-                onValueChange = onDraftChanged,
-                modifier = Modifier.weight(1f),
-                placeholder = { Text("Message", color = MaterialTheme.colorScheme.onSurfaceVariant) },
-                minLines = 1,
-                maxLines = 6,
-                shape = RoundedCornerShape(24.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                ),
-                enabled = enabled,
-            )
-            FilledTonalIconButton(
-                onClick = onSend,
-                enabled = sendEnabled,
-                modifier = Modifier.size(48.dp),
-                shape = CircleShape,
-                colors = IconButtonDefaults.filledTonalIconButtonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                    disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                ),
-            ) {
-                Text(
-                    text = if (transition == ComposerTransition.SendStarted) "…" else "↑",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun EmptyMessagesState(modifier: Modifier = Modifier) {
-    Box(modifier = modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            Text("💬", fontSize = 40.sp)
-            Text("No messages yet", style = MaterialTheme.typography.titleMedium)
-            Text(
-                "Send the first message below",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
-        }
-    }
-}
-
-private data class ConversationBanner(
-    val title: String,
-    val detail: String,
-    val isError: Boolean,
-)
-
-private fun SendEligibility.toBanner(): ConversationBanner? = when (this) {
-    SendEligibility.Allowed -> null
-    is SendEligibility.Blocked -> ConversationBanner(reason.toBlockedTitle(), reason.toBlockedDetail(), true)
-}
-
-private fun ConversationSyncState.toBanner(): ConversationBanner? = when (this) {
-    ConversationSyncState.Idle, ConversationSyncState.Syncing, ConversationSyncState.UpToDate -> null
-    is ConversationSyncState.Backoff -> ConversationBanner("Retry scheduled", "We'll keep trying to deliver your messages.", false)
-    is ConversationSyncState.Conflict -> ConversationBanner("Sync conflict", "A delivery conflict was detected.", true)
-    is ConversationSyncState.Failed -> ConversationBanner("Sync failed", error.message, true)
-}
-
-private fun SendBlockReason.toBlockedTitle(): String = when (this) {
-    SendBlockReason.SenderVerificationPending -> "Verification pending"
-    SendBlockReason.RecipientVerificationPending -> "Recipient pending"
-    SendBlockReason.TenDlcRegistrationPending -> "Registration pending"
-    SendBlockReason.MissingIdentityVerification -> "Identity check required"
-    SendBlockReason.MissingEncryptionMaterial -> "Encryption unavailable"
-    SendBlockReason.RateLimited -> "Sending paused"
-    SendBlockReason.Offline -> "Offline"
-}
-
-private fun SendBlockReason.toBlockedDetail(): String = when (this) {
-    SendBlockReason.SenderVerificationPending -> "Business verification in progress."
-    SendBlockReason.RecipientVerificationPending -> "Recipient needs verification."
-    SendBlockReason.TenDlcRegistrationPending -> "10DLC registration in progress."
-    SendBlockReason.MissingIdentityVerification -> "Identity verification required."
-    SendBlockReason.MissingEncryptionMaterial -> "Encryption keys unavailable."
-    SendBlockReason.RateLimited -> "Rate limit hit. Auto-retrying."
-    SendBlockReason.Offline -> "No network connection."
-}
-
-@Composable
-private fun DeliveryIndicator.toStatusColor() = when (this) {
-    DeliveryIndicator.Pending -> MaterialTheme.colorScheme.onSurfaceVariant
-    DeliveryIndicator.Queued -> MaterialTheme.colorScheme.tertiary
-    DeliveryIndicator.Sent, DeliveryIndicator.Delivered, DeliveryIndicator.Read -> MaterialTheme.colorScheme.primary
-    is DeliveryIndicator.Failed -> MaterialTheme.colorScheme.error
-}
-
-private fun DeliveryIndicator.toStatusLabel(): String = when (this) {
-    DeliveryIndicator.Pending -> "Sending…"
-    DeliveryIndicator.Queued -> "Retrying"
-    DeliveryIndicator.Sent -> "Sent"
-    DeliveryIndicator.Delivered -> "Delivered"
-    DeliveryIndicator.Read -> "Read"
-    is DeliveryIndicator.Failed -> "Not sent"
-}
-
-private fun RowSyncState.failureDetail(): String? = when (this) {
-    RowSyncState.Idle, RowSyncState.Syncing -> null
-    is RowSyncState.Failed -> error.message
-}
-
-private fun Instant.toBubbleTime(): String = BUBBLE_TIME_FORMATTER.format(atZone(ZoneId.systemDefault()))
-
-private val BUBBLE_TIME_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")

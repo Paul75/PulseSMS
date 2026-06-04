@@ -6,9 +6,7 @@ plugins {
 android {
     namespace = "com.skeler.pulse.core.design"
     compileSdk {
-        version = release(36) {
-            minorApiLevel = 1
-        }
+        version = release(37)
     }
 
     defaultConfig {
@@ -34,8 +32,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.foundation)
     implementation(libs.androidx.compose.animation)
-    // Material 3 Expressive — pinned outside BOM
-    implementation(libs.androidx.compose.material3.expressive)
+    implementation(libs.androidx.compose.material3)
     // DataStore for theme preferences
     implementation(libs.androidx.datastore.preferences)
     // ViewModel Compose integration

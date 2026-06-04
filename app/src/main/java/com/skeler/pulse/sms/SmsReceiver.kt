@@ -7,6 +7,7 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.Telephony
 import android.telephony.SmsMessage
+import android.util.Log
 
 /**
  * BroadcastReceiver for incoming SMS messages.
@@ -18,6 +19,9 @@ import android.telephony.SmsMessage
  * 1. Extract SMS PDUs from the intent
  * 2. Write the message to the system SMS Provider (`content://sms/inbox`)
  * 3. Show a notification to the user
+ *
+ * Uses [goAsync] to move provider writes off the main thread and avoid ANR
+ * when the content provider is under contention.
  */
 class SmsReceiver : BroadcastReceiver() {
 
@@ -27,24 +31,34 @@ class SmsReceiver : BroadcastReceiver() {
         val messages = Telephony.Sms.Intents.getMessagesFromIntent(intent)
         if (messages.isNullOrEmpty()) return
 
-        // Group message parts by sender (multi-part SMS)
-        val grouped = messages.groupBy { it.originatingAddress ?: "Unknown" }
+        val pendingResult = goAsync()
 
-        for ((sender, parts) in grouped) {
-            val body = parts.joinToString("") { it.messageBody ?: "" }
-            if (body.isBlank()) continue
+        Thread {
+            try {
+                // Group message parts by sender (multi-part SMS)
+                val grouped = messages.groupBy { it.originatingAddress ?: "Unknown" }
 
-            val persistedUri = writeSmsToProvider(context, sender, body, parts.first())
-            if (persistedUri != null) {
-                SmsNotificationHelper.notifyIncomingSms(context, sender, body)
-            } else {
-                SmsNotificationHelper.notifyIncomingSms(
-                    context = context,
-                    sender = sender,
-                    body = "New message received, but Pulse couldn't save it yet.",
-                )
+                for ((sender, parts) in grouped) {
+                    val body = parts.joinToString("") { it.messageBody ?: "" }
+                    if (body.isBlank()) continue
+
+                    OtpClipboardAutoCopy.copyIncomingCodeIfEnabled(context, body)
+
+                    val persistedUri = writeSmsToProvider(context, sender, body, parts.first())
+                    if (persistedUri != null) {
+                        SmsNotificationHelper.notifyIncomingSms(context, sender, body)
+                    } else {
+                        SmsNotificationHelper.notifyIncomingSms(
+                            context = context,
+                            sender = sender,
+                            body = "New message received, but Pulse couldn't save it yet.",
+                        )
+                    }
+                }
+            } finally {
+                pendingResult.finish()
             }
-        }
+        }.start()
     }
 
     /**
@@ -70,8 +84,8 @@ class SmsReceiver : BroadcastReceiver() {
                 put(Telephony.Sms.THREAD_ID, Telephony.Threads.getOrCreateThreadId(context, sender))
             }
             context.contentResolver.insert(Telephony.Sms.CONTENT_URI, values)
-        } catch (_: Exception) {
-            // Provider write may fail if permissions aren't fully granted yet
+        } catch (e: Exception) {
+            Log.e("SmsReceiver", "Failed to write SMS to provider", e)
             null
         }
 }

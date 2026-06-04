@@ -1,23 +1,13 @@
 package com.skeler.pulse.sms
 
-import android.app.Activity
-import android.app.PendingIntent
-import android.content.BroadcastReceiver
 import android.content.ContentResolver
 import android.content.ContentValues
 import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
 import android.database.ContentObserver
-import android.database.Cursor
-import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.provider.Telephony
-import android.telephony.SmsManager
 import android.util.Log
-import androidx.compose.runtime.Immutable
-import androidx.core.content.ContextCompat
 import com.skeler.pulse.contact.normalizeAddressForDisplay
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -25,62 +15,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeout
-import java.time.Instant
-import java.util.Collections
-import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicInteger
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
-
-internal const val CALLBACK_REQUEST_CODE_MULTIPLIER = 31L
-internal const val CALLBACK_REQUEST_CODE_MODULUS = 2_147_483_648L
-
-internal fun callbackRequestCode(token: String, partIndex: Int): Int {
-    val rawRequestCode = token.hashCode().toLong() * CALLBACK_REQUEST_CODE_MULTIPLIER + partIndex
-    return Math.floorMod(rawRequestCode, CALLBACK_REQUEST_CODE_MODULUS).toInt()
-}
-
-/**
- * Data class representing a single SMS message from the system content provider.
- */
-@Immutable
-data class SystemSms(
-    val id: Long,
-    val address: String,
-    val body: String,
-    val date: Long,
-    val type: Int, // 1=inbox, 2=sent, 3=draft
-    val read: Boolean,
-    val threadId: Long,
-) {
-    val isInbound: Boolean get() = type == Telephony.Sms.MESSAGE_TYPE_INBOX
-    val isOutbound: Boolean
-        get() = type == Telephony.Sms.MESSAGE_TYPE_SENT ||
-            type == Telephony.Sms.MESSAGE_TYPE_QUEUED ||
-            type == Telephony.Sms.MESSAGE_TYPE_OUTBOX ||
-            type == Telephony.Sms.MESSAGE_TYPE_FAILED
-    val timestamp: Instant get() = Instant.ofEpochMilli(date)
-}
-
-/**
- * Data class representing a conversation thread (grouped by address).
- */
-@Immutable
-data class SmsThread(
-    val threadId: Long,
-    val address: String,
-    val snippet: String,
-    val date: Long,
-    val messageCount: Int,
-    val unreadCount: Int,
-) {
-    val timestamp: Instant get() = Instant.ofEpochMilli(date)
-}
 
 /**
  * Reads real SMS messages from the Android system content provider (`content://sms`).
@@ -94,6 +31,7 @@ class SystemSmsReader(
 ) {
 
     private val contentResolver: ContentResolver get() = context.contentResolver
+    private val smsSender = SystemSmsSender(context = context, ioDispatcher = ioDispatcher)
 
     /**
      * Observes all conversation threads as a reactive [Flow].
@@ -127,7 +65,7 @@ class SystemSmsReader(
             readJob?.cancel()
             contentResolver.unregisterContentObserver(observer)
         }
-    }.distinctUntilChanged()
+    }.conflate().distinctUntilChanged()
 
     /**
      * Observes messages for a specific address/thread as a reactive [Flow].
@@ -159,7 +97,7 @@ class SystemSmsReader(
             readJob?.cancel()
             contentResolver.unregisterContentObserver(observer)
         }
-    }.distinctUntilChanged()
+    }.conflate().distinctUntilChanged()
 
     /**
      * Reads all conversation threads from the SMS provider,
@@ -176,19 +114,24 @@ class SystemSmsReader(
         ) ?: return emptyList()
 
         cursor.use {
+            val columns = SmsCursorColumns(it)
             while (it.moveToNext()) {
-                val sms = it.toSystemSms()
-                val resolvedThreadId = sms.resolvedThreadId()
+                val address = it.getString(columns.address) ?: "Unknown"
+                val resolvedThreadId = it.getLong(columns.threadId).let { providerThreadId ->
+                    if (providerThreadId > 0L) providerThreadId else syntheticThreadId(address)
+                }
                 val accumulator = threads.getOrPut(resolvedThreadId) {
                     MutableThreadAccumulator(
                         threadId = resolvedThreadId,
-                        address = sms.address.normalizeAddressForDisplay(),
-                        snippet = sms.body.take(120),
-                        date = sms.date,
+                        address = address.normalizeAddressForDisplay(),
+                        snippet = (it.getString(columns.body) ?: "").take(120),
+                        date = it.getLong(columns.date),
                     )
                 }
                 accumulator.messageCount += 1
-                if (!sms.read && sms.isInbound) {
+                val isUnread = it.getInt(columns.read) != 1
+                val isInbound = it.getInt(columns.type) == Telephony.Sms.MESSAGE_TYPE_INBOX
+                if (isUnread && isInbound) {
                     accumulator.unreadCount += 1
                 }
             }
@@ -211,30 +154,34 @@ class SystemSmsReader(
      */
     fun readMessages(address: String, threadId: Long? = null): List<SystemSms> {
         val normalized = address.normalizeAddressForDisplay()
-        val selection = if (threadId.isProviderThreadId()) {
-            "${Telephony.Sms.THREAD_ID} = ?"
-        } else {
-            null
-        }
-        val selectionArgs = if (threadId.isProviderThreadId()) {
-            arrayOf(threadId.toString())
-        } else {
-            null
-        }
+        val criteria = messageReadCriteria(threadId = threadId, address = address)
+        val exactMessages = readMessages(criteria = criteria, normalizedAddress = normalized)
+        if (exactMessages.isNotEmpty() || threadId.isProviderThreadId()) return exactMessages
+
+        val fullScanCriteria = SmsProviderCriteria(
+            selection = null,
+            selectionArgs = emptyArray(),
+            shouldFilterByAddress = true,
+        )
+        return readMessages(criteria = fullScanCriteria, normalizedAddress = normalized)
+    }
+
+    private fun readMessages(criteria: SmsProviderCriteria, normalizedAddress: String): List<SystemSms> {
         val messages = mutableListOf<SystemSms>()
 
         val cursor = contentResolver.query(
             Telephony.Sms.CONTENT_URI,
             SMS_PROJECTION,
-            selection,
-            selectionArgs,
+            criteria.selection,
+            criteria.selectionArgs.ifEmpty { null },
             "${Telephony.Sms.DATE} ASC",
         ) ?: return emptyList()
 
         cursor.use {
+            val columns = SmsCursorColumns(it)
             while (it.moveToNext()) {
-                val sms = it.toSystemSms()
-                if (threadId.isProviderThreadId() || sms.address.normalizeAddressForDisplay() == normalized) {
+                val sms = it.toSystemSms(columns)
+                if (!criteria.shouldFilterByAddress || sms.address.normalizeAddressForDisplay() == normalizedAddress) {
                     messages.add(sms)
                 }
             }
@@ -285,42 +232,45 @@ class SystemSmsReader(
         readValue: Int? = null,
     ): List<Long> {
         val normalizedAddress = address.normalizeAddressForDisplay()
-        val selection = buildList {
-            if (threadId.isProviderThreadId()) {
-                add("${Telephony.Sms.THREAD_ID} = ?")
-            }
-            if (inboundOnly) {
-                add("${Telephony.Sms.TYPE} = ?")
-            }
-            if (readValue != null) {
-                add("${Telephony.Sms.READ} = ?")
-            }
-        }.joinToString(separator = " AND ").ifBlank { null }
-        val selectionArgs = buildList {
-            if (threadId.isProviderThreadId()) {
-                add(threadId.toString())
-            }
-            if (inboundOnly) {
-                add(Telephony.Sms.MESSAGE_TYPE_INBOX.toString())
-            }
-            if (readValue != null) {
-                add(readValue.toString())
-            }
-        }.toTypedArray().ifEmpty { null }
+        val criteria = smsIdCriteria(
+            threadId = threadId,
+            address = address,
+            inboundOnly = inboundOnly,
+            readValue = readValue,
+        )
+        val exactIds = resolveSmsIds(criteria = criteria, normalizedAddress = normalizedAddress)
+        if (exactIds.isNotEmpty() || threadId.isProviderThreadId()) return exactIds
 
+        val fullScanCriteria = SmsProviderCriteria(
+            selection = buildList {
+                if (inboundOnly) add("${Telephony.Sms.TYPE} = ?")
+                if (readValue != null) add("${Telephony.Sms.READ} = ?")
+            }.joinToString(separator = " AND ").ifBlank { null },
+            selectionArgs = buildList {
+                if (inboundOnly) add(Telephony.Sms.MESSAGE_TYPE_INBOX.toString())
+                if (readValue != null) add(readValue.toString())
+            }.toTypedArray(),
+            shouldFilterByAddress = true,
+        )
+        return resolveSmsIds(criteria = fullScanCriteria, normalizedAddress = normalizedAddress)
+    }
+
+    private fun resolveSmsIds(criteria: SmsProviderCriteria, normalizedAddress: String): List<Long> {
         val ids = mutableListOf<Long>()
         val cursor = contentResolver.query(
             Telephony.Sms.CONTENT_URI,
             arrayOf(Telephony.Sms._ID, Telephony.Sms.ADDRESS),
-            selection,
-            selectionArgs,
+            criteria.selection,
+            criteria.selectionArgs.ifEmpty { null },
             null,
         ) ?: return emptyList()
         cursor.use {
+            val idColumn = it.getColumnIndexOrThrow(Telephony.Sms._ID)
+            val addressColumn = it.getColumnIndexOrThrow(Telephony.Sms.ADDRESS)
             while (it.moveToNext()) {
-                val rawAddress = it.getString(it.getColumnIndexOrThrow(Telephony.Sms.ADDRESS)).orEmpty()
-                if (threadId.isProviderThreadId() || rawAddress.normalizeAddressForDisplay() == normalizedAddress) {
-                    ids.add(it.getLong(it.getColumnIndexOrThrow(Telephony.Sms._ID)))
+                val rawAddress = it.getString(addressColumn).orEmpty()
+                if (!criteria.shouldFilterByAddress || rawAddress.normalizeAddressForDisplay() == normalizedAddress) {
+                    ids.add(it.getLong(idColumn))
                 }
             }
         }
@@ -330,252 +280,10 @@ class SystemSmsReader(
     private fun List<Long>.toIdSelection(): Pair<String, Array<String>> =
         "${Telephony.Sms._ID} IN (${joinToString { "?" }})" to map(Long::toString).toTypedArray()
 
-    /**
-     * Sends an SMS and writes it to the system SMS content provider.
-     */
-    @Suppress("DEPRECATION")
-    suspend fun sendSms(address: String, body: String, subscriptionId: Int? = null) = withContext(ioDispatcher) {
-        val smsManager = if (subscriptionId != null) {
-            SmsManager.getSmsManagerForSubscriptionId(subscriptionId)
-        } else {
-            SmsManager.getDefault()
-        }
-        val parts = smsManager.divideMessage(body)
-        val messageUri = insertOutgoingMessage(address, body, Telephony.Sms.MESSAGE_TYPE_QUEUED)
-        val token = deliveryCallbackToken(address, messageUri)
-        try {
-            val deliveryIntents = buildDeliveryIntents(address, parts, messageUri, token)
-            awaitSentCallbacks(address, parts, messageUri, token) { sentIntents ->
-                smsManager.sendMultipartTextMessage(address, null, parts, sentIntents, deliveryIntents)
-            }
-            updateOutgoingMessage(messageUri, Telephony.Sms.MESSAGE_TYPE_SENT)
-            awaitDeliveryCallbacks(address, parts, messageUri, token)
-        } catch (exception: Exception) {
-            updateOutgoingMessage(messageUri, Telephony.Sms.MESSAGE_TYPE_FAILED)
-            throw exception
-        }
-    }
-
-    private fun insertOutgoingMessage(address: String, body: String, messageType: Int): Uri? {
-        val values = ContentValues().apply {
-            put(Telephony.Sms.ADDRESS, address)
-            put(Telephony.Sms.BODY, body)
-            put(Telephony.Sms.DATE, System.currentTimeMillis())
-            put(Telephony.Sms.READ, 1)
-            put(Telephony.Sms.SEEN, 1)
-            put(Telephony.Sms.TYPE, messageType)
-            put(Telephony.Sms.STATUS, Telephony.Sms.STATUS_PENDING)
-            put(Telephony.Sms.THREAD_ID, Telephony.Threads.getOrCreateThreadId(context, address))
-        }
-        return contentResolver.insert(Telephony.Sms.CONTENT_URI, values)
-    }
-
-    private fun updateOutgoingMessage(messageUri: Uri?, messageType: Int) {
-        if (messageUri == null) return
-        val status = if (messageType == Telephony.Sms.MESSAGE_TYPE_SENT) {
-            Telephony.Sms.STATUS_COMPLETE
-        } else {
-            Telephony.Sms.STATUS_FAILED
-        }
-        val values = ContentValues().apply {
-            put(Telephony.Sms.TYPE, messageType)
-            put(Telephony.Sms.STATUS, status)
-        }
-        contentResolver.update(messageUri, values, null, null)
-    }
-
-    private fun updateOutgoingStatus(messageUri: Uri?, status: Int) {
-        if (messageUri == null) return
-        val values = ContentValues().apply {
-            put(Telephony.Sms.STATUS, status)
-        }
-        contentResolver.update(messageUri, values, null, null)
-    }
-
-    private suspend fun awaitSentCallbacks(
-        address: String,
-        parts: ArrayList<String>,
-        messageUri: Uri?,
-        token: String,
-        send: (ArrayList<PendingIntent>) -> Unit,
-    ) = withTimeout(SEND_CALLBACK_TIMEOUT_MILLIS) {
-        suspendCancellableCoroutine { continuation ->
-            val action = "$ACTION_SMS_SENT.$token"
-            val remainingParts = AtomicInteger(parts.size)
-            val completed = AtomicBoolean(false)
-            val failures = Collections.synchronizedList(mutableListOf<Int>())
-            val receiver = object : BroadcastReceiver() {
-                override fun onReceive(context: Context, intent: Intent) {
-                    if (intent.action != action) return
-                    if (resultCode != Activity.RESULT_OK) {
-                        failures.add(resultCode)
-                    }
-                    if (remainingParts.decrementAndGet() == 0 && completed.compareAndSet(false, true)) {
-                        context.unregisterReceiver(this)
-                        if (failures.isEmpty()) {
-                            continuation.resume(Unit)
-                        } else {
-                            continuation.resumeWithException(
-                                SmsSendException("SMS send failed with result ${failures.first()}")
-                            )
-                        }
-                    }
-                }
-            }
-            ContextCompat.registerReceiver(
-                context,
-                receiver,
-                IntentFilter(action),
-                ContextCompat.RECEIVER_NOT_EXPORTED,
-            )
-            continuation.invokeOnCancellation {
-                if (completed.compareAndSet(false, true)) {
-                    runCatching { context.unregisterReceiver(receiver) }
-                }
-            }
-            val sentIntents = buildCallbackIntents(
-                action = action,
-                token = token,
-                parts = parts,
-                messageUri = messageUri,
-            )
-            try {
-                send(sentIntents)
-            } catch (exception: Exception) {
-                if (completed.compareAndSet(false, true)) {
-                    runCatching { context.unregisterReceiver(receiver) }
-                    continuation.resumeWithException(exception)
-                }
-            }
-        }
-    }
-
-    private fun buildDeliveryIntents(
-        address: String,
-        parts: ArrayList<String>,
-        messageUri: Uri?,
-        token: String,
-    ): ArrayList<PendingIntent> {
-        val action = "$ACTION_SMS_DELIVERED.$token"
-        return buildCallbackIntents(
-            action = action,
-            token = token,
-            parts = parts,
-            messageUri = messageUri,
-        )
-    }
-
-    private suspend fun awaitDeliveryCallbacks(
-        address: String,
-        parts: ArrayList<String>,
-        messageUri: Uri?,
-        token: String,
-    ) = runCatching {
-        withTimeout(DELIVERY_CALLBACK_TIMEOUT_MILLIS) {
-            suspendCancellableCoroutine { continuation ->
-                val action = "$ACTION_SMS_DELIVERED.$token"
-                val remainingParts = AtomicInteger(parts.size)
-                val completed = AtomicBoolean(false)
-                val failures = Collections.synchronizedList(mutableListOf<Int>())
-                val receiver = object : BroadcastReceiver() {
-                    override fun onReceive(context: Context, intent: Intent) {
-                        if (intent.action != action) return
-                        if (resultCode != Activity.RESULT_OK) {
-                            failures.add(resultCode)
-                        }
-                        if (remainingParts.decrementAndGet() == 0 && completed.compareAndSet(false, true)) {
-                            context.unregisterReceiver(this)
-                            if (failures.isEmpty()) {
-                                updateOutgoingStatus(messageUri, Telephony.Sms.STATUS_COMPLETE)
-                            } else {
-                                updateOutgoingStatus(messageUri, Telephony.Sms.STATUS_FAILED)
-                            }
-                            continuation.resume(Unit)
-                        }
-                    }
-                }
-                ContextCompat.registerReceiver(
-                    context,
-                    receiver,
-                    IntentFilter(action),
-                    ContextCompat.RECEIVER_NOT_EXPORTED,
-                )
-                continuation.invokeOnCancellation {
-                    if (completed.compareAndSet(false, true)) {
-                        runCatching { context.unregisterReceiver(receiver) }
-                    }
-                }
-            }
-        }
-    }
-
-    private fun deliveryCallbackToken(address: String, messageUri: Uri?): String =
-        "${java.util.UUID.randomUUID()}_${messageUri?.lastPathSegment.orEmpty()}_${address.hashCode()}"
-
-    private fun buildCallbackIntents(
-        action: String,
-        token: String,
-        parts: ArrayList<String>,
-        messageUri: Uri?,
-    ): ArrayList<PendingIntent> {
-        val intents = ArrayList<PendingIntent>(parts.size)
-        repeat(parts.size) { index ->
-            val intent = Intent(action)
-                .setPackage(context.packageName)
-                .putExtra(EXTRA_MESSAGE_URI, messageUri?.toString())
-                .putExtra(EXTRA_PART_INDEX, index)
-                .putExtra(EXTRA_PART_COUNT, parts.size)
-            intents.add(
-                PendingIntent.getBroadcast(
-                    context,
-                    callbackRequestCode(token, index),
-                    intent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-                )
-            )
-        }
-        return intents
-    }
-
-    private fun Cursor.toSystemSms(): SystemSms = SystemSms(
-        id = getLong(getColumnIndexOrThrow(Telephony.Sms._ID)),
-        address = getString(getColumnIndexOrThrow(Telephony.Sms.ADDRESS)) ?: "Unknown",
-        body = getString(getColumnIndexOrThrow(Telephony.Sms.BODY)) ?: "",
-        date = getLong(getColumnIndexOrThrow(Telephony.Sms.DATE)),
-        type = getInt(getColumnIndexOrThrow(Telephony.Sms.TYPE)),
-        read = getInt(getColumnIndexOrThrow(Telephony.Sms.READ)) == 1,
-        threadId = getLong(getColumnIndexOrThrow(Telephony.Sms.THREAD_ID)),
-    )
-
-    private fun SystemSms.resolvedThreadId(): Long =
-        if (threadId > 0L) threadId else syntheticThreadId(address)
-
-    private fun Long?.isProviderThreadId(): Boolean = this != null && this > 0L
-
-    private fun syntheticThreadId(address: String): Long {
-        val normalizedAddress = address.normalizeAddressForDisplay()
-        val unsignedHash = normalizedAddress.hashCode().toLong() and 0xffffffffL
-        return -1L - unsignedHash
-    }
-
-    private data class MutableThreadAccumulator(
-        val threadId: Long,
-        val address: String,
-        val snippet: String,
-        val date: Long,
-        var messageCount: Int = 0,
-        var unreadCount: Int = 0,
-    )
+    suspend fun sendSms(address: String, body: String, subscriptionId: Int? = null) =
+        smsSender.sendSms(address = address, body = body, subscriptionId = subscriptionId)
 
     companion object {
-        private const val ACTION_SMS_SENT = "com.skeler.pulse.sms.SMS_SENT"
-        private const val ACTION_SMS_DELIVERED = "com.skeler.pulse.sms.SMS_DELIVERED"
-        private const val EXTRA_MESSAGE_URI = "message_uri"
-        private const val EXTRA_PART_INDEX = "part_index"
-        private const val EXTRA_PART_COUNT = "part_count"
-        private const val SEND_CALLBACK_TIMEOUT_MILLIS = 60_000L
-        private const val DELIVERY_CALLBACK_TIMEOUT_MILLIS = 180_000L
-
         private val SMS_PROJECTION = arrayOf(
             Telephony.Sms._ID,
             Telephony.Sms.ADDRESS,
@@ -587,5 +295,3 @@ class SystemSmsReader(
         )
     }
 }
-
-private class SmsSendException(message: String) : Exception(message)

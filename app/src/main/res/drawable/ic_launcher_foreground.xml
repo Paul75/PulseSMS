@@ -1,10 +1,40 @@
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="24dp"
-    android:height="24dp"
-    android:viewportWidth="24"
-    android:viewportHeight="24">
-    <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M6,5.5H18C20.2,5.5 22,7.3 22,9.5V13.5C22,15.7 20.2,17.5 18,17.5H14.8L10.6,20.1C9.9,20.6 9,20 9,19.2V17.5H6C3.8,17.5 2,15.7 2,13.5V9.5C2,7.3 3.8,5.5 6,5.5ZM5,11H9.6L10.6,8.1C10.9,7.2 12.2,7.2 12.4,8.2L14,15L15.5,11.7C15.7,11.3 16,11 16.5,11H19V13H17.1L14.8,18.1C14.4,19 13.1,18.8 12.9,17.8L11.4,11.5L11.2,12.3C11.1,12.7 10.7,13 10.2,13H5V11Z" />
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <group
+        android:pivotX="54"
+        android:pivotY="54"
+        android:scaleX="0.84"
+        android:scaleY="0.84">
+
+        <!-- White speech bubble -->
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M54,18 C72.8,18 88,31.4 88,48 C88,64.6 72.8,78 54,78 C47,78 42,77.5 38,76 C34,76 28,80 24,82 C21,82 26,72 28,64 C29,60 20,56 20,48 C20,31.4 35.2,18 54,18 Z" />
+
+        <!-- ECG waveform stroke with blue -> purple -> pink gradient -->
+        <path
+            android:strokeWidth="8"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round"
+            android:pathData="M27,50 L40.5,50 C43.5,50 46.5,32 49.5,32 C52.5,32 55.5,68 58.5,68 C61.5,68 64.5,50 67.5,50 L81,50">
+            <aapt:attr name="android:strokeColor">
+                <gradient
+                    android:startX="27"
+                    android:startY="50"
+                    android:endX="81"
+                    android:endY="50"
+                    android:type="linear">
+                    <item android:offset="0.0" android:color="#FF4F6BFF" />
+                    <item android:offset="0.5" android:color="#FF9C27B0" />
+                    <item android:offset="1.0" android:color="#FFE040FB" />
+                </gradient>
+            </aapt:attr>
+        </path>
+    </group>
 </vector>

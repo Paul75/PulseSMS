@@ -14,6 +14,7 @@ import com.skeler.pulse.messaging.domain.RequestConversationRefreshUseCase
 import com.skeler.pulse.messaging.domain.SendMessageUseCase
 import com.skeler.pulse.messaging.model.MessagingIntent
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
@@ -77,6 +78,29 @@ class MessagingViewModelTest {
     }
 
     @Test
+    fun `send pressed is ignored while message is already sending`() = runTest(dispatcher) {
+        val pendingSend = CompletableDeferred<SendMessageResult>()
+        val repository = FakeConversationRepository(
+            sendBehavior = FakeSendBehavior.Pending(pendingSend),
+        )
+        val viewModel = MessagingViewModel(
+            initialConversationId = "conv-1",
+            observeConversation = ObserveConversationUseCase(repository),
+            requestConversationRefresh = RequestConversationRefreshUseCase(repository),
+            sendMessage = SendMessageUseCase(repository),
+        )
+
+        dispatcher.scheduler.advanceUntilIdle()
+        viewModel.accept(MessagingIntent.DraftChanged("hello"))
+        viewModel.accept(MessagingIntent.SendPressed)
+        viewModel.accept(MessagingIntent.SendPressed)
+        dispatcher.scheduler.runCurrent()
+
+        assertEquals(1, repository.sendRequests)
+        pendingSend.complete(SendMessageResult.Success("msg-1"))
+    }
+
+    @Test
     fun `load conversation preserves backoff sync state`() = runTest(dispatcher) {
         val viewModel = MessagingViewModel(
             initialConversationId = "conv-1",
@@ -135,9 +159,11 @@ class MessagingViewModelTest {
             lastSyncedAt = null,
             complianceUpdatedAt = null,
         ),
-        private val sendResult: SendMessageResult = SendMessageResult.Success("msg-1"),
+        sendResult: SendMessageResult = SendMessageResult.Success("msg-1"),
+        private val sendBehavior: FakeSendBehavior = FakeSendBehavior.Immediate(sendResult),
     ) : ConversationRepository {
         var refreshRequests: Int = 0
+        var sendRequests: Int = 0
 
         override fun observeInbox(): Flow<List<ConversationSummary>> = flowOf(emptyList())
 
@@ -151,6 +177,17 @@ class MessagingViewModelTest {
         override suspend fun sendMessage(
             conversationId: String,
             draft: MessageDraft,
-        ): SendMessageResult = sendResult
+        ): SendMessageResult {
+            sendRequests += 1
+            return when (sendBehavior) {
+                is FakeSendBehavior.Immediate -> sendBehavior.result
+                is FakeSendBehavior.Pending -> sendBehavior.result.await()
+            }
+        }
+    }
+
+    private sealed interface FakeSendBehavior {
+        data class Immediate(val result: SendMessageResult) : FakeSendBehavior
+        data class Pending(val result: CompletableDeferred<SendMessageResult>) : FakeSendBehavior
     }
 }

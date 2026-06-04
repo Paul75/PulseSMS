@@ -49,11 +49,13 @@ import androidx.compose.material.icons.rounded.Key
 import androidx.compose.material.icons.rounded.MarkunreadMailbox
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -64,6 +66,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -107,6 +110,11 @@ internal enum class InboxFilter(val label: String) {
     All("All"), Personal("Personal"), Business("Business"), OTP("OTP"),
 }
 
+private const val InboxBackgroundTintAlpha = 0.42f
+private const val InboxBackgroundTintEndFraction = 0.34f
+private val NewChatFabDefaultElevation = 1.dp
+private val NewChatFabPressedElevation = 1.5.dp
+
 @Composable
 internal fun RealInboxScreen(
     state: RealInboxState,
@@ -130,6 +138,14 @@ internal fun RealInboxScreen(
     val reducedMotion = rememberReducedMotionEnabled()
     val listFlingBehavior = rememberSmoothFlingBehavior(enabled = !reducedMotion)
     val filterFlingBehavior = rememberSmoothFlingBehavior(enabled = !reducedMotion)
+    val colors = MaterialTheme.colorScheme
+    val inboxBackdropBrush = colors.screenBackgroundBrush {
+        Brush.verticalGradient(
+            0f to colors.surfaceContainerLow.copy(alpha = InboxBackgroundTintAlpha),
+            InboxBackgroundTintEndFraction to colors.surface,
+            1f to colors.surface,
+        )
+    }
 
     val filteredByChip = remember(state.threads, selectedFilter) {
         when (InboxFilter.entries[selectedFilter]) {
@@ -176,6 +192,8 @@ internal fun RealInboxScreen(
     }
 
     Scaffold(
+        modifier = Modifier.background(brush = inboxBackdropBrush),
+        containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
                 title = { Text("Messages", style = MaterialTheme.typography.headlineMedium) },
@@ -203,6 +221,12 @@ internal fun RealInboxScreen(
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                 shape = RoundedCornerShape(24.dp),
+                elevation = FloatingActionButtonDefaults.elevation(
+                    defaultElevation = NewChatFabDefaultElevation,
+                    pressedElevation = NewChatFabPressedElevation,
+                    focusedElevation = NewChatFabDefaultElevation,
+                    hoveredElevation = NewChatFabPressedElevation,
+                ),
                 icon = {
                     Icon(
                         imageVector = Icons.Rounded.AddComment,
@@ -218,7 +242,11 @@ internal fun RealInboxScreen(
             )
         },
     ) { innerPadding ->
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(brush = inboxBackdropBrush),
+        ) {
             LazyColumn(
             state = listState,
             flingBehavior = listFlingBehavior,
@@ -380,512 +408,3 @@ internal fun RealInboxScreen(
     }
 }
 }
-
-@Composable
-internal fun InboxOnboardingScreen(
-    accessState: InboxAccessState,
-    hasPendingLaunchRequest: Boolean,
-    onRequestSmsPermissions: () -> Unit,
-    onRequestDefaultSms: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val isAlreadyDefault = !accessState.permissionDenied && accessState.isDefaultSmsApp
-
-    val title: String
-    val body: String
-    val ctaLabel: String
-    val ctaIcon: ImageVector
-    val onCtaClick: () -> Unit
-    val statusLabel: String
-
-    if (accessState.permissionDenied) {
-        title = "Unlock your inbox"
-        body = "Pulse needs SMS access before it can read threads, open drafts, and route you into the right conversation."
-        ctaLabel = "Grant permissions"
-        ctaIcon = Icons.Rounded.Key
-        onCtaClick = onRequestSmsPermissions
-        statusLabel = "SMS permission required"
-    } else if (isAlreadyDefault) {
-        title = "Pulse is your default app"
-        body = "Android is ready to route SMS messages to Pulse. Everything is set up correctly."
-        ctaLabel = "Manage default app"
-        ctaIcon = Icons.Rounded.CheckCircle
-        onCtaClick = onRequestDefaultSms
-        statusLabel = "Default SMS app active"
-    } else {
-        title = "Make Pulse your default"
-        body = "Set Pulse as your default SMS app so Android can hand off compose requests, send reliably, and keep your inbox in one place."
-        ctaLabel = "Set as default"
-        ctaIcon = Icons.Rounded.MarkunreadMailbox
-        onCtaClick = onRequestDefaultSms
-        statusLabel = "Default SMS app required"
-    }
-
-    Scaffold(
-        modifier = modifier,
-        containerColor = MaterialTheme.colorScheme.surface,
-    ) { innerPadding ->
-        BoxWithConstraints(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .background(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(
-                            MaterialTheme.colorScheme.surface,
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
-                            MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f),
-                        ),
-                    ),
-                ),
-        ) {
-            val cardWidth = if (maxWidth > 720.dp) 520.dp else maxWidth - 32.dp
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .navigationBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 24.dp),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Surface(
-                    modifier = Modifier.widthIn(max = cardWidth),
-                    shape = RoundedCornerShape(32.dp),
-                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
-                    tonalElevation = 0.dp,
-                    border = CardDefaults.outlinedCardBorder().copy(
-                        brush = SolidColor(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.32f)),
-                    ),
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 24.dp, vertical = 28.dp),
-                        verticalArrangement = Arrangement.spacedBy(18.dp),
-                    ) {
-                        StatusPill(
-                            label = statusLabel,
-                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                        )
-                        Surface(
-                            shape = RoundedCornerShape(24.dp),
-                            color = MaterialTheme.colorScheme.surfaceContainerLow,
-                            tonalElevation = 0.dp,
-                            modifier = Modifier.size(72.dp),
-                        ) {
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Icon(
-                                    imageVector = ctaIcon,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(32.dp),
-                                    tint = MaterialTheme.colorScheme.primary,
-                                )
-                            }
-                        }
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text(
-                                text = title,
-                                style = MaterialTheme.typography.headlineMedium,
-                            )
-                            Text(
-                                text = body,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        if (hasPendingLaunchRequest) {
-                            Surface(
-                                shape = RoundedCornerShape(24.dp),
-                                color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.68f),
-                                tonalElevation = 0.dp,
-                            ) {
-                                Text(
-                                    text = "A requested conversation is waiting. Pulse will open it as soon as setup is complete.",
-                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onTertiaryContainer,
-                                )
-                            }
-                        }
-                        Button(
-                            onClick = onCtaClick,
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Icon(
-                                imageVector = ctaIcon,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp),
-                            )
-                            Spacer(Modifier.width(10.dp))
-                            Text(ctaLabel)
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-internal fun InboxLoadingStateCard(
-    onRefreshInbox: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    InboxStateCard(
-        title = "Loading your threads",
-        body = "Pulse is syncing with Android so your latest messages appear in one place.",
-        statusLabel = "Inbox refresh",
-        icon = Icons.Rounded.HourglassTop,
-        actionLabel = "Refresh",
-        onAction = onRefreshInbox,
-        modifier = modifier,
-    ) {
-        SerafinaProgressIndicator(modifier = Modifier.fillMaxWidth())
-    }
-}
-
-@Composable
-private fun InboxEmptyStateCard(
-    onOpenNewChat: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    InboxStateCard(
-        title = "Your inbox is ready",
-        body = "There are no SMS threads here yet. Start a new conversation and Pulse will keep the lane warm for you.",
-        statusLabel = "Zero threads",
-        icon = Icons.Rounded.AddComment,
-        actionLabel = "New chat",
-        onAction = onOpenNewChat,
-        modifier = modifier,
-    )
-}
-
-@Composable
-private fun InboxFilteredEmptyStateCard(
-    activeFilter: String,
-    onShowAll: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    InboxStateCard(
-        title = "Nothing in $activeFilter",
-        body = "This filter is clear right now. Switch back to the full inbox to see every thread again.",
-        statusLabel = "$activeFilter filter",
-        icon = Icons.Rounded.Search,
-        actionLabel = "Show all",
-        onAction = onShowAll,
-        modifier = modifier,
-    )
-}
-
-@Composable
-internal fun InboxErrorStateCard(
-    message: String,
-    onRetry: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    InboxStateCard(
-        title = "Inbox unavailable",
-        body = message,
-        statusLabel = "Read problem",
-        icon = Icons.Rounded.ErrorOutline,
-        actionLabel = "Try again",
-        onAction = onRetry,
-        modifier = modifier,
-    )
-}
-
-@Composable
-internal fun InboxStateCard(
-    title: String,
-    body: String,
-    statusLabel: String,
-    icon: ImageVector,
-    actionLabel: String,
-    onAction: () -> Unit,
-    modifier: Modifier = Modifier,
-    accentColor: Color = MaterialTheme.colorScheme.primary,
-    supportingContent: @Composable (() -> Unit)? = null,
-) {
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(top = 16.dp),
-        shape = RoundedCornerShape(28.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-    ) {
-        Box(
-            modifier = Modifier.background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        accentColor.copy(alpha = 0.10f),
-                        MaterialTheme.colorScheme.surfaceContainerLow,
-                        MaterialTheme.colorScheme.tertiary.copy(alpha = 0.08f),
-                    ),
-                ),
-            ),
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Surface(
-                        shape = RoundedCornerShape(20.dp),
-                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.78f),
-                        tonalElevation = 0.dp,
-                        modifier = Modifier.size(52.dp),
-                    ) {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Icon(
-                                imageVector = icon,
-                                contentDescription = null,
-                                modifier = Modifier.size(24.dp),
-                                tint = accentColor,
-                            )
-                        }
-                    }
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        StatusPill(
-                            label = statusLabel,
-                            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f),
-                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Text(
-                            text = title,
-                            style = MaterialTheme.typography.titleLarge,
-                        )
-                    }
-                }
-                Text(
-                    text = body,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                supportingContent?.invoke()
-                FilledTonalButton(onClick = onAction) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(actionLabel)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-internal fun SmsThreadCard(
-    thread: SmsThread,
-    isPinned: Boolean,
-    isArchived: Boolean,
-    isContextMenuOpen: Boolean,
-    onClick: () -> Unit,
-    onLongPress: () -> Unit,
-    onDismissMenu: () -> Unit,
-    onTogglePinned: () -> Unit,
-    onToggleArchived: () -> Unit,
-    onToggleUnread: () -> Unit,
-    onBlock: () -> Unit,
-    onDelete: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val context = LocalContext.current
-    val reducedMotion = rememberReducedMotionEnabled()
-    val displayName = remember(thread.address) { displayNameFor(context, thread.address) }
-    val initials = displayName.toAvatarInitials()
-    val hasUnread = thread.unreadCount > 0
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val containerColor by animateColorAsState(
-        targetValue = when {
-            isContextMenuOpen -> MaterialTheme.colorScheme.surfaceContainerHigh
-            hasUnread -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.55f)
-            else -> MaterialTheme.colorScheme.surfaceContainerLow
-        },
-        label = "thread_card_container",
-    )
-    val outlineColor by animateColorAsState(
-        targetValue = when {
-            isContextMenuOpen -> MaterialTheme.colorScheme.primary.copy(alpha = 0.44f)
-            hasUnread -> MaterialTheme.colorScheme.primary.copy(alpha = 0.22f)
-            isPressed -> MaterialTheme.colorScheme.primary.copy(alpha = 0.30f)
-            else -> MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.18f)
-        },
-        label = "thread_card_outline",
-    )
-    val cardScale by animateFloatAsState(
-        targetValue = if (isPressed || isContextMenuOpen) 0.985f else 1f,
-        animationSpec = if (reducedMotion) tween(0) else spring(
-            stiffness = Spring.StiffnessMedium,
-            dampingRatio = Spring.DampingRatioNoBouncy,
-        ),
-        label = "thread_card_press_scale",
-    )
-    val semanticsLabel = remember(displayName, thread.unreadCount) {
-        buildString {
-            append("Open thread ")
-            append(displayName)
-            if (thread.unreadCount > 0) {
-                append(", ")
-                append(thread.unreadCount)
-                append(" unread")
-            }
-        }
-    }
-    val cardShape = RoundedCornerShape(20.dp)
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .graphicsLayer {
-                scaleX = cardScale
-                scaleY = cardScale
-            }
-            .clip(cardShape)
-            .semantics {
-                role = Role.Button
-                contentDescription = semanticsLabel
-            }
-            .combinedClickable(
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = onClick,
-                onLongClick = onLongPress,
-            ),
-    ) {
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = cardShape,
-            colors = CardDefaults.cardColors(containerColor = containerColor),
-            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-            border = CardDefaults.outlinedCardBorder().copy(
-                brush = SolidColor(outlineColor),
-            ),
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
-                horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically,
-            ) {
-                SerafinaAvatar(imageUrl = null, initials = initials, hasUnread = hasUnread, size = 48.dp)
-                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = displayName,
-                            style = if (hasUnread) MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                            else MaterialTheme.typography.titleMedium,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        if (isPinned) {
-                            StatusPill(
-                                label = "Pinned",
-                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                            )
-                        }
-                    }
-                    Text(
-                        text = thread.snippet,
-                        style = if (hasUnread) {
-                            MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium)
-                        } else {
-                            MaterialTheme.typography.bodyMedium
-                        },
-                        color = if (hasUnread) MaterialTheme.colorScheme.onSecondaryContainer
-                        else MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(
-                        text = thread.timestamp.toInboxTimestamp(),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = if (hasUnread) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    if (hasUnread) {
-                        Box(
-                            modifier = Modifier.size(20.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(thread.unreadCount.toString(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimary)
-                        }
-                    }
-                }
-            }
-        }
-
-        SerafinaContextMenu(
-            expanded = isContextMenuOpen,
-            onDismissRequest = onDismissMenu,
-        ) {
-            SerafinaContextMenuItem(
-                text = if (isPinned) "Unpin" else "Pin",
-                icon = if (isPinned) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
-                onClick = {
-                    onDismissMenu()
-                    onTogglePinned()
-                },
-            )
-            SerafinaContextMenuItem(
-                text = if (isArchived) "Unarchive" else "Archive",
-                icon = Icons.Rounded.Archive,
-                onClick = {
-                    onDismissMenu()
-                    onToggleArchived()
-                },
-            )
-            SerafinaContextMenuItem(
-                text = if (hasUnread) "Mark as read" else "Mark as unread",
-                icon = Icons.Rounded.MarkunreadMailbox,
-                onClick = {
-                    onDismissMenu()
-                    onToggleUnread()
-                },
-            )
-            SerafinaContextMenuItem(
-                text = "Block",
-                icon = Icons.Rounded.Block,
-                contentColor = MaterialTheme.colorScheme.error,
-                onClick = {
-                    onDismissMenu()
-                    onBlock()
-                },
-            )
-            SerafinaContextMenuDivider()
-            SerafinaContextMenuItem(
-                text = "Delete",
-                icon = Icons.Rounded.Delete,
-                contentColor = MaterialTheme.colorScheme.error,
-                onClick = {
-                    onDismissMenu()
-                    onDelete()
-                },
-            )
-        }
-    }
-}
-

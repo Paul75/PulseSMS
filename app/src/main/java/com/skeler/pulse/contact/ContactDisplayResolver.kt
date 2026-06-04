@@ -1,13 +1,18 @@
 package com.skeler.pulse.contact
 
 import android.content.Context
+import android.net.Uri
 import android.provider.ContactsContract
 import android.telephony.PhoneNumberUtils
 import java.util.Locale
 import java.text.Normalizer
-import java.util.concurrent.ConcurrentHashMap
+import java.util.Collections
 
-private val displayNameCache = ConcurrentHashMap<String, String>()
+private val displayNameCache: MutableMap<String, String> = Collections.synchronizedMap(
+    object : LinkedHashMap<String, String>(64, 0.75f, true) {
+        override fun removeEldestEntry(eldest: Map.Entry<String, String>): Boolean = size > 500
+    }
+)
 
 internal fun displayNameFor(context: Context, address: String): String {
     val trimmedAddress = address.trim()
@@ -91,34 +96,32 @@ internal fun String.toBlockedSenderDisplayLabel(): String {
         ?: "Unknown sender"
 }
 
+/**
+ * Uses [ContactsContract.PhoneLookup.CONTENT_FILTER_URI] for O(1) indexed lookup
+ * instead of scanning the entire Phone table.
+ */
 private fun lookupContactDisplayName(
     context: Context,
     normalizedAddress: String,
 ): String? {
+    if (normalizedAddress.isBlank()) return null
+    val lookupUri = Uri.withAppendedPath(
+        ContactsContract.PhoneLookup.CONTENT_FILTER_URI,
+        Uri.encode(normalizedAddress),
+    )
     return try {
         context.contentResolver.query(
-            ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
-            arrayOf(
-                ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME_PRIMARY,
-                ContactsContract.CommonDataKinds.Phone.NUMBER,
-            ),
+            lookupUri,
+            arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME),
             null,
             null,
             null,
         )?.use { cursor ->
-            val nameIndex = cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME_PRIMARY)
-            val numberIndex = cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.NUMBER)
-
-            while (cursor.moveToNext()) {
-                val candidateAddress = cursor.getString(numberIndex).orEmpty().normalizeAddressForDisplay()
-                if (candidateAddress != normalizedAddress) continue
-
-                return cursor.getString(nameIndex)
-                    .orEmpty()
-                    .trim()
-                    .ifBlank { null }
+            if (cursor.moveToFirst()) {
+                cursor.getString(0)?.trim()?.ifBlank { null }
+            } else {
+                null
             }
-            null
         }
     } catch (_: SecurityException) {
         null

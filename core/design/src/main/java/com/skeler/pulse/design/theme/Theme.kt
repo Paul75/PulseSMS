@@ -1,13 +1,9 @@
-@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
-
 package com.skeler.pulse.design.theme
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.MaterialExpressiveTheme
-import androidx.compose.material3.MotionScheme
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
@@ -48,7 +44,7 @@ val LocalReduceMotion = staticCompositionLocalOf { false }
  * 2. **Tier 2** (user-chosen palette): `rememberDynamicColorScheme` from seed
  * 3. **Tier 3**: static brand-fallback [SerafinaLightColorScheme] / [SerafinaDarkColorScheme]
  *
- * Wraps content in [MaterialExpressiveTheme] with a calm [MotionScheme.standard].
+ * Wraps content in stable Material 3 [MaterialTheme].
  */
 @Composable
 fun SerafinaAppTheme(
@@ -70,14 +66,11 @@ fun SerafinaAppTheme(
         pureBlackEnabled = themeState.blackThemeEnabled,
     )
 
-    val motionScheme = MotionScheme.standard()
-
     CompositionLocalProvider(LocalReduceMotion provides reduceMotion) {
-        MaterialExpressiveTheme(
+        MaterialTheme(
             colorScheme = colorScheme,
             typography = SerafinaTypography,
             shapes = SerafinaShapes,
-            motionScheme = motionScheme,
             content = content,
         )
     }
@@ -99,10 +92,16 @@ private fun resolveColorScheme(
                 if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
             }
         !dynamicColorEnabled ->
-            rememberDynamicColorScheme(
-                seedColor = palette.seedColor,
-                isDark = darkTheme,
-            )
+            if (palette == SerafinaPalette.Graphite) {
+                remember(darkTheme) {
+                    if (darkTheme) GraphiteDarkColorScheme else GraphiteLightColorScheme
+                }
+            } else {
+                rememberDynamicColorScheme(
+                    seedColor = palette.seedColor,
+                    isDark = darkTheme,
+                )
+            }
         else ->
             remember(darkTheme) {
                 if (darkTheme) SerafinaDarkColorScheme else SerafinaLightColorScheme

@@ -62,6 +62,12 @@ class RoomEncryptedMessageStoreTest {
 
         override suspend fun pendingSync(limit: Int, nowEpochMillis: Long): List<EncryptedMessageEntity> = emptyList()
 
+        override suspend fun pendingSyncForConversation(
+            conversationId: String,
+            limit: Int,
+            nowEpochMillis: Long,
+        ): List<EncryptedMessageEntity> = emptyList()
+
         override suspend fun findByMessageId(messageId: String): EncryptedMessageEntity? = null
 
         override suspend fun updateSync(

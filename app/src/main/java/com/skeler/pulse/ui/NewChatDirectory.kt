@@ -82,18 +82,11 @@ internal fun List<NewChatRecipient>.mergeThreadRecipients(threads: List<SmsThrea
         }
     }
 
+    // Recent SMS threads are only acknowledged if they already belong to saved contacts.
     threads.forEach { thread ->
         val normalizedAddress = thread.address.normalizeAddressForDisplay()
         if (normalizedAddress.isBlank()) return@forEach
-        recipients.putIfAbsent(
-            normalizedAddress,
-            NewChatRecipient(
-                key = "thread_${thread.threadId}_$normalizedAddress",
-                displayName = thread.address,
-                address = thread.address,
-                sortLabel = thread.address,
-            ),
-        )
+        recipients[normalizedAddress] ?: return@forEach
     }
 
     return recipients.values.sortedWith(
@@ -135,4 +128,3 @@ internal fun loadSimOptions(context: Context): List<NewChatSimOption> {
         fallback
     }
 }
-

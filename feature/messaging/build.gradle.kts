@@ -6,9 +6,7 @@ plugins {
 android {
     namespace = "com.skeler.pulse.feature.messaging"
     compileSdk {
-        version = release(36) {
-            minorApiLevel = 1
-        }
+        version = release(37)
     }
 
     defaultConfig {
@@ -43,7 +41,7 @@ dependencies {
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
-    implementation(libs.androidx.compose.material3.expressive)
+    implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.graphics.shapes)
     implementation(libs.kotlinx.collections.immutable)
     testImplementation(libs.junit)

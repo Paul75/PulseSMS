@@ -86,6 +86,9 @@ class MessagingViewModel(
 
     private fun sendDraft() {
         val current = mutableState.value
+        if (current is MessagingState.Sending) {
+            return
+        }
         if (current.composer.draft.text.isBlank() || current.composer.eligibility is SendEligibility.Blocked) {
             return
         }

@@ -34,7 +34,7 @@ val PureBlackContainerHighest = Color(0xFF28282E)
 // ═══════════════════════════════════════════════════════════
 
 /**
- * Three curated seed palettes for the Serafina design system.
+ * Four curated seed palettes for the Serafina design system.
  * Each variant carries a seed [Color] used to derive a full tonal palette
  * via MaterialKolor's `rememberDynamicColorScheme`.
  */
@@ -42,6 +42,7 @@ enum class SerafinaPalette(val seedColor: Color, val label: String) {
     LavenderVolt(Color(0xFF6B4EFF), "Lavender Volt"),
     OrchardGreen(Color(0xFF2E7D32), "Orchard Green"),
     OnyxNoir(Color(0xFF825500), "Onyx Noir"),
+    Graphite(Color(0xFF595959), "Graphite"),
 }
 
 // ── Static brand fallback schemes (Tier 3) ──
@@ -121,4 +122,80 @@ val SerafinaDarkColorScheme = androidx.compose.material3.darkColorScheme(
     surfaceContainer = Color(0xFF29282C),
     surfaceContainerHigh = Color(0xFF333236),
     surfaceContainerHighest = Color(0xFF3E3D41),
+)
+
+val GraphiteLightColorScheme = androidx.compose.material3.lightColorScheme(
+    primary = Color(0xFF595959),
+    onPrimary = Color(0xFFFFFFFF),
+    primaryContainer = Color(0xFFE2E2E2),
+    onPrimaryContainer = Color(0xFF1C1C1C),
+    secondary = Color(0xFF5F5F5F),
+    onSecondary = Color(0xFFFFFFFF),
+    secondaryContainer = Color(0xFFE5E5E5),
+    onSecondaryContainer = Color(0xFF1F1F1F),
+    tertiary = Color(0xFF676767),
+    onTertiary = Color(0xFFFFFFFF),
+    tertiaryContainer = Color(0xFFE9E9E9),
+    onTertiaryContainer = Color(0xFF202020),
+    error = Color(0xFFBA1A1A),
+    onError = Color(0xFFFFFFFF),
+    errorContainer = Color(0xFFFFDAD6),
+    onErrorContainer = Color(0xFF410002),
+    background = Color(0xFFFCFCFC),
+    onBackground = Color(0xFF1B1B1B),
+    surface = Color(0xFFFCFCFC),
+    onSurface = Color(0xFF1B1B1B),
+    surfaceVariant = Color(0xFFE2E2E2),
+    onSurfaceVariant = Color(0xFF474747),
+    outline = Color(0xFF777777),
+    outlineVariant = Color(0xFFC6C6C6),
+    scrim = Color(0xFF000000),
+    inverseSurface = Color(0xFF303030),
+    inverseOnSurface = Color(0xFFF2F2F2),
+    inversePrimary = Color(0xFFC7C7C7),
+    surfaceDim = Color(0xFFDCDCDC),
+    surfaceBright = Color(0xFFFCFCFC),
+    surfaceContainerLowest = Color(0xFFFFFFFF),
+    surfaceContainerLow = Color(0xFFF6F6F6),
+    surfaceContainer = Color(0xFFF0F0F0),
+    surfaceContainerHigh = Color(0xFFEAEAEA),
+    surfaceContainerHighest = Color(0xFFE4E4E4),
+)
+
+val GraphiteDarkColorScheme = androidx.compose.material3.darkColorScheme(
+    primary = Color(0xFFC7C7C7),
+    onPrimary = Color(0xFF303030),
+    primaryContainer = Color(0xFF595959),
+    onPrimaryContainer = Color(0xFFFFFFFF),
+    secondary = Color(0xFFC9C9C9),
+    onSecondary = Color(0xFF313131),
+    secondaryContainer = Color(0xFF484848),
+    onSecondaryContainer = Color(0xFFE5E5E5),
+    tertiary = Color(0xFFD0D0D0),
+    onTertiary = Color(0xFF363636),
+    tertiaryContainer = Color(0xFF505050),
+    onTertiaryContainer = Color(0xFFE9E9E9),
+    error = Color(0xFFFFB4AB),
+    onError = Color(0xFF690005),
+    errorContainer = Color(0xFF93000A),
+    onErrorContainer = Color(0xFFFFDAD6),
+    background = Color(0xFF141414),
+    onBackground = Color(0xFFE6E6E6),
+    surface = Color(0xFF141414),
+    onSurface = Color(0xFFE6E6E6),
+    surfaceVariant = Color(0xFF474747),
+    onSurfaceVariant = Color(0xFFC6C6C6),
+    outline = Color(0xFF919191),
+    outlineVariant = Color(0xFF474747),
+    scrim = Color(0xFF000000),
+    inverseSurface = Color(0xFFE6E6E6),
+    inverseOnSurface = Color(0xFF303030),
+    inversePrimary = Color(0xFF595959),
+    surfaceDim = Color(0xFF141414),
+    surfaceBright = Color(0xFF3A3A3A),
+    surfaceContainerLowest = Color(0xFF0F0F0F),
+    surfaceContainerLow = Color(0xFF1E1E1E),
+    surfaceContainer = Color(0xFF222222),
+    surfaceContainerHigh = Color(0xFF2C2C2C),
+    surfaceContainerHighest = Color(0xFF373737),
 )

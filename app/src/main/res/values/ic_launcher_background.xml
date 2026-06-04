@@ -13,7 +13,6 @@
   ~ See the License for the specific language governing permissions and
   ~ limitations under the License.
   -->
-<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ic_launcher_background">#351C79</color>
+    <color name="ic_launcher_background">#1F104D</color>
 </resources>

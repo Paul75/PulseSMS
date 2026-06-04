@@ -101,13 +101,16 @@ internal fun LockScreen(
         }
     }
 
-    // Show the biometric prompt as soon as the lock screen is shown
+    var hasAutoPrompted by rememberSaveable { mutableStateOf(false) }
+
+    // Show the biometric prompt once when the lock screen first appears
     LaunchedEffect(biometricEnabled, biometricAvailability) {
-        if (!biometricEnabled) return@LaunchedEffect
+        if (!biometricEnabled || hasAutoPrompted) return@LaunchedEffect
         if (biometricAvailability != BiometricAvailability.Available) {
             authError = biometricAvailability.lockScreenMessage()
             return@LaunchedEffect
         }
+        hasAutoPrompted = true
         requestBiometricUnlock()
     }
 
