@@ -50,7 +50,7 @@ android {
         minSdk = 24
         targetSdk = 37
         versionCode = 10300
-        versionName = "1.3.0"
+        versionName = "2.3.0"
         buildConfigField("String", "PULSE_SYNC_ENVIRONMENT", quoted(pulseSyncEnvironment))
         buildConfigField("String", "PULSE_SYNC_DEV_BASE_URL", quoted(pulseSyncDevBaseUrl))
         buildConfigField("String", "PULSE_SYNC_STAGING_BASE_URL", quoted(pulseSyncStagingBaseUrl))
