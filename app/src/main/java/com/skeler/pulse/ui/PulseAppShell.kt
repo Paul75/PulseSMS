@@ -6,6 +6,7 @@ import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.core.app.NotificationManagerCompat
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -88,6 +89,7 @@ fun PulseAppShell(
             activeAddress = requestedAddress
             activeConversationTitle = request.conversationTitle.ifBlank { displayNameFor(context, requestedAddress) }
             activeSubscriptionId = null
+            NotificationManagerCompat.from(context).cancel(requestedAddress.hashCode())
             onOpenConversation(requestedAddress, null)
             backStack = listOf(DESTINATION_INBOX, DESTINATION_CONVERSATION)
         } else {
@@ -169,6 +171,7 @@ fun PulseAppShell(
                                 activeConversationTitle = displayNameFor(context, address)
                                 activeSubscriptionId = null
                                 conversationDraftSeed = ""
+                                NotificationManagerCompat.from(context).cancel(address.hashCode())
                                 onOpenConversation(address, threadId)
                                 backStack = listOf(DESTINATION_INBOX, DESTINATION_CONVERSATION)
                             },
