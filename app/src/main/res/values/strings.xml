@@ -43,4 +43,21 @@
     <string name="conversation_loading_status">Opening thread</string>
     <string name="conversation_empty_title">No messages yet</string>
     <string name="conversation_empty_subtitle">Start a cleaner thread with %1$s using the composer below.</string>
+    <string name="settings_title">Settings</string>
+    <string name="settings_general">General</string>
+    <string name="settings_default_sms_app">Default SMS app</string>
+    <string name="settings_set_as_default">Set as default</string>
+    <string name="settings_archived_chats">Archived chats</string>
+    <string name="settings_security">Security &amp; Biometric</string>
+    <string name="settings_blocked_numbers">Blocked numbers</string>
+    <string name="settings_auto_copy_codes">Auto-copy codes</string>
+    <string name="settings_color_scheme">Color scheme</string>
+    <string name="settings_theme">Theme</string>
+    <string name="settings_black_theme">Black theme only</string>
+    <string name="settings_dynamic">Dynamic</string>
+    <string name="settings_language">Language</string>
+    <string name="settings_language_system">System default</string>
+    <string name="settings_language_french">French</string>
+    <string name="settings_language_english">English</string>
+    <string name="action_close">Close</string>
 </resources>

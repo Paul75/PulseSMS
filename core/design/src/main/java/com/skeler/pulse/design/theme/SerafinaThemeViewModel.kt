@@ -20,6 +20,7 @@ data class SerafinaThemeState(
     val reduceMotion: Boolean = false,
     val fingerprintEnabled: Boolean = false,
     val password: String = "",
+    val selectedLocale: String = "system",
 )
 
 /**
@@ -98,6 +99,12 @@ class SerafinaThemeViewModel(application: Application) : AndroidViewModel(applic
     fun clearPassword() {
         viewModelScope.launch {
             prefs.setPassword("")
+        }
+    }
+
+    fun setSelectedLocale(locale: String) {
+        viewModelScope.launch {
+            prefs.setSelectedLocale(locale)
         }
     }
 }
