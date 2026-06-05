@@ -60,4 +60,12 @@
     <string name="settings_language_french">French</string>
     <string name="settings_language_english">English</string>
     <string name="action_close">Close</string>
+    <string name="inbox_title">Messages</string>
+    <string name="inbox_search_placeholder">Search conversations</string>
+    <string name="inbox_clear_search">Clear search</string>
+    <string name="inbox_new_chat">New chat</string>
+    <string name="inbox_filter_all">All</string>
+    <string name="inbox_filter_personal">Personal</string>
+    <string name="inbox_filter_business">Business</string>
+    <string name="inbox_filter_otp">OTP</string>
 </resources>

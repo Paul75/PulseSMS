@@ -89,6 +89,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
@@ -98,6 +99,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.skeler.pulse.InboxAccessState
+import com.skeler.pulse.R
 import com.skeler.pulse.contact.displayNameFor
 import com.skeler.pulse.design.component.SerafinaAvatar
 import com.skeler.pulse.design.component.SerafinaProgressIndicator
@@ -109,8 +111,11 @@ import com.skeler.pulse.design.util.rememberReducedMotionEnabled
 import com.skeler.pulse.design.util.rememberSmoothFlingBehavior
 import com.skeler.pulse.sms.SmsThread
 
-internal enum class InboxFilter(val label: String) {
-    All("All"), Personal("Personal"), Business("Business"), OTP("OTP"),
+internal enum class InboxFilter(val labelResId: Int) {
+    All(R.string.inbox_filter_all),
+    Personal(R.string.inbox_filter_personal),
+    Business(R.string.inbox_filter_business),
+    OTP(R.string.inbox_filter_otp),
 }
 
 private const val InboxBackgroundTintAlpha = 0.42f
@@ -198,17 +203,17 @@ internal fun RealInboxScreen(
         containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
-                title = { Text("Messages", style = MaterialTheme.typography.headlineMedium) },
+                title = { Text(stringResource(R.string.inbox_title), style = MaterialTheme.typography.headlineMedium) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
                     scrolledContainerColor = MaterialTheme.colorScheme.surface,
                 ),
                 actions = {
                     IconButton(onClick = onOpenArchivedChats) {
-                        Icon(Icons.Rounded.Archive, contentDescription = "Archived chats", tint = MaterialTheme.colorScheme.onSurface)
+                        Icon(Icons.Rounded.Archive, contentDescription = stringResource(R.string.settings_archived_chats), tint = MaterialTheme.colorScheme.onSurface)
                     }
                     IconButton(onClick = onOpenSettings) {
-                        Icon(Icons.Rounded.Settings, contentDescription = "Settings", tint = MaterialTheme.colorScheme.onSurface)
+                        Icon(Icons.Rounded.Settings, contentDescription = stringResource(R.string.settings_title), tint = MaterialTheme.colorScheme.onSurface)
                     }
                 },
             )
@@ -217,7 +222,7 @@ internal fun RealInboxScreen(
             ExtendedFloatingActionButton(
                 modifier = Modifier.semantics {
                     role = Role.Button
-                    contentDescription = "New chat"
+                    contentDescription = context.getString(R.string.inbox_new_chat)
                 },
                 onClick = onOpenNewChat,
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -237,7 +242,7 @@ internal fun RealInboxScreen(
                 },
                 text = {
                     Text(
-                        text = "New chat",
+                        text = stringResource(R.string.inbox_new_chat),
                         style = MaterialTheme.typography.labelLarge,
                     )
                 },
@@ -287,7 +292,7 @@ internal fun RealInboxScreen(
                             IconButton(onClick = { searchQuery = "" }, modifier = Modifier.size(34.dp)) {
                                 Icon(
                                     imageVector = Icons.Rounded.Close,
-                                    contentDescription = "Clear search",
+                                    contentDescription = stringResource(R.string.inbox_clear_search),
                                     modifier = Modifier.size(18.dp),
                                 )
                             }
@@ -295,7 +300,7 @@ internal fun RealInboxScreen(
                     },
                     placeholder = {
                         Text(
-                            text = "Search conversations",
+                            text = stringResource(R.string.inbox_search_placeholder),
                             style = MaterialTheme.typography.bodyLarge,
                         )
                     },
@@ -322,7 +327,7 @@ internal fun RealInboxScreen(
                             ),
                         ) {
                             Text(
-                                filter.label,
+                                stringResource(filter.labelResId),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
@@ -354,9 +359,9 @@ internal fun RealInboxScreen(
                     item(key = "inbox_filtered_empty") {
                         InboxFilteredEmptyStateCard(
                             activeFilter = if (normalizedQuery.isNotBlank()) {
-                                "${InboxFilter.entries[selectedFilter].label} · \"$normalizedQuery\""
+                                "${stringResource(InboxFilter.entries[selectedFilter].labelResId)} · \"$normalizedQuery\""
                             } else {
-                                InboxFilter.entries[selectedFilter].label
+                                stringResource(InboxFilter.entries[selectedFilter].labelResId)
                             },
                             onShowAll = {
                                 selectedFilter = InboxFilter.All.ordinal
