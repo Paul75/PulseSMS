@@ -92,6 +92,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.skeler.pulse.InboxAccessState
+import com.skeler.pulse.contact.contactLookupIntent
 import com.skeler.pulse.contact.displayNameFor
 import com.skeler.pulse.contact.contactPhotoUriFor
 import com.skeler.pulse.design.component.SerafinaAvatar
@@ -203,7 +204,20 @@ internal fun SmsThreadCard(
                     .padding(horizontal = 16.dp, vertical = 14.dp),
                 horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically,
             ) {
-                SerafinaAvatar(imageUrl = photoUri?.toString(), initials = initials, hasUnread = hasUnread, size = 48.dp)
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .combinedClickable(
+                            onClick = {
+                                contactLookupIntent(context, thread.address)
+                                    ?.let { context.startActivity(it) }
+                            },
+                            onLongClick = onLongPress,
+                        ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    SerafinaAvatar(imageUrl = photoUri?.toString(), initials = initials, hasUnread = hasUnread, size = 48.dp)
+                }
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),

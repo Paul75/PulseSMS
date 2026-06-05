@@ -1,6 +1,7 @@
 package com.skeler.pulse.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -36,6 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.skeler.pulse.R
+import com.skeler.pulse.contact.contactLookupIntent
 import com.skeler.pulse.contact.contactPhotoUriFor
 import com.skeler.pulse.design.component.SerafinaAvatar
 import com.skeler.pulse.design.component.StatusPill
@@ -95,14 +97,24 @@ internal fun ConversationTopBar(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    SerafinaAvatar(
-                        imageUrl = photoUri?.toString(),
-                        initials = title.toAvatarInitials(),
-                        hasUnread = hasUnreadMessages,
-                        size = 42.dp,
-                        containerColor = avatarColors.containerColor,
-                        contentColor = avatarColors.contentColor,
-                    )
+                    Box(
+                        modifier = Modifier
+                            .size(42.dp)
+                            .clickable {
+                                contactLookupIntent(context, address)
+                                    ?.let { context.startActivity(it) }
+                            },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        SerafinaAvatar(
+                            imageUrl = photoUri?.toString(),
+                            initials = title.toAvatarInitials(),
+                            hasUnread = hasUnreadMessages,
+                            size = 42.dp,
+                            containerColor = avatarColors.containerColor,
+                            contentColor = avatarColors.contentColor,
+                        )
+                    }
                     Column(
                         modifier = Modifier.weight(1f),
                         verticalArrangement = Arrangement.spacedBy(2.dp),

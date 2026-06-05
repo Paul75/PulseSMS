@@ -15,6 +15,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
@@ -116,6 +117,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.skeler.pulse.R
+import com.skeler.pulse.contact.contactLookupIntent
 import com.skeler.pulse.design.component.SerafinaAvatar
 import com.skeler.pulse.design.component.SerafinaProgressIndicator
 import com.skeler.pulse.design.component.StatusPill
@@ -170,13 +172,24 @@ internal fun ConversationOverviewCard(
             horizontalArrangement = Arrangement.spacedBy(14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            SerafinaAvatar(
-                imageUrl = null,
-                initials = title.toAvatarInitials(),
-                size = 52.dp,
-                containerColor = avatarColors.containerColor,
-                contentColor = avatarColors.contentColor,
-            )
+            val context = LocalContext.current
+            Box(
+                modifier = Modifier
+                    .size(52.dp)
+                    .clickable {
+                        contactLookupIntent(context, address)
+                            ?.let { context.startActivity(it) }
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                SerafinaAvatar(
+                    imageUrl = null,
+                    initials = title.toAvatarInitials(),
+                    size = 52.dp,
+                    containerColor = avatarColors.containerColor,
+                    contentColor = avatarColors.contentColor,
+                )
+            }
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(3.dp),
