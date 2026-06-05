@@ -64,6 +64,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -137,7 +140,6 @@ internal fun RealInboxScreen(
     val context = LocalContext.current
     val reducedMotion = rememberReducedMotionEnabled()
     val listFlingBehavior = rememberSmoothFlingBehavior(enabled = !reducedMotion)
-    val filterFlingBehavior = rememberSmoothFlingBehavior(enabled = !reducedMotion)
     val colors = MaterialTheme.colorScheme
     val inboxBackdropBrush = colors.screenBackgroundBrush {
         Brush.verticalGradient(
@@ -301,39 +303,33 @@ internal fun RealInboxScreen(
                 )
             }
             item(key = "filter_chips") {
-                LazyRow(
-                    state = filterState,
-                    flingBehavior = filterFlingBehavior,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier
-                        .padding(bottom = 8.dp)
-                        .elasticOverscroll(
-                            enabled = !reducedMotion,
-                            state = filterState,
-                            orientation = Orientation.Horizontal,
-                        ),
-                ) {
-                    items(
-                        count = InboxFilter.entries.size,
-                        key = { index -> "inbox_filter_${InboxFilter.entries[index].name}" },
-                        contentType = { "inbox_filter_chip" },
-                    ) { index ->
-                        val filter = InboxFilter.entries[index]
-                        val animatedModifier = motionAnimateItemModifier(reducedMotion)
-                            .then(rememberEntranceModifier(filter.name, reducedMotion))
-                        FilterChip(
-                            modifier = animatedModifier,
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    SingleChoiceSegmentedButtonRow(
+                        modifier = Modifier.padding(bottom = 8.dp),
+                    ) {
+                    InboxFilter.entries.forEachIndexed { index, filter ->
+                        SegmentedButton(
                             selected = selectedFilter == index,
                             onClick = { selectedFilter = index },
-                            label = { Text(filter.label) },
-                            shape = RoundedCornerShape(20.dp),
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                                selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                            icon = {},
+                            shape = SegmentedButtonDefaults.itemShape(
+                                index = index,
+                                count = InboxFilter.entries.size,
                             ),
-                        )
+                            colors = SegmentedButtonDefaults.colors(
+                                activeContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                activeContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                            ),
+                        ) {
+                            Text(
+                                filter.label,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
                     }
                 }
+            }
             }
             when {
                 state.loading && state.showLoadingCard -> {
