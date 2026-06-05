@@ -92,6 +92,9 @@
     <string name="conversation_discard_draft_body">Vous avez un message non envoyé. Quitter et abandonner cette conversation ?</string>
     <string name="conversation_discard_confirm">Abandonner</string>
     <string name="conversation_discard_cancel">Continuer la rédaction</string>
+    <string name="archived_empty_body">Archivez une conversation depuis la boîte de réception pour la garder hors de votre liste principale sans la supprimer.</string>
+    <string name="archived_empty_status">Aucune archive</string>
+    <string name="archived_back_to_inbox">Retour à la boîte de réception</string>
     <string name="settings_default_sms_subtitle">Pulse est votre appli SMS par défaut</string>
     <string name="settings_tap_to_set_default">Définir Pulse par défaut</string>
     <string name="settings_no_archived_chats">Aucune conversation archivée</string>

@@ -27,7 +27,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.zIndex
+import com.skeler.pulse.R
 import androidx.compose.ui.unit.dp
 import com.skeler.pulse.design.util.elasticOverscroll
 import com.skeler.pulse.design.util.motionAnimateItemModifier
@@ -67,10 +69,10 @@ internal fun ArchivedChatsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Archived chats", style = MaterialTheme.typography.headlineMedium) },
+                title = { Text(stringResource(R.string.settings_archived_chats), style = MaterialTheme.typography.headlineMedium) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Rounded.ArrowBackIosNew, contentDescription = "Back")
+                        Icon(Icons.Rounded.ArrowBackIosNew, contentDescription = stringResource(R.string.action_back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -110,10 +112,10 @@ internal fun ArchivedChatsScreen(
                 threads.isEmpty() -> {
                     item(key = "archived_empty") {
                         InboxStateCard(
-                            title = "No archived chats",
-                            body = "Archive a conversation from the inbox to keep it out of your primary list without deleting it.",
-                            statusLabel = "Archive empty",
-                            actionLabel = "Back to inbox",
+                            title = stringResource(R.string.settings_no_archived_chats),
+                            body = stringResource(R.string.archived_empty_body),
+                            statusLabel = stringResource(R.string.archived_empty_status),
+                            actionLabel = stringResource(R.string.archived_back_to_inbox),
                             icon = Icons.Rounded.Archive,
                             onAction = onBack,
                         )
