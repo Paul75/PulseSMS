@@ -35,6 +35,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.skeler.pulse.R
@@ -244,8 +245,8 @@ internal fun RealConversationScreen(
     if (showDeleteSelectedDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteSelectedDialog = false },
-            title = { Text("Delete messages") },
-            text = { Text("Delete ${selectedMessageIds.size} selected message${if (selectedMessageIds.size > 1) "s" else ""}?") },
+            title = { Text(stringResource(R.string.conversation_delete_title)) },
+            text = { Text(pluralStringResource(R.plurals.conversation_delete_body, selectedMessageIds.size, selectedMessageIds.size)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -254,12 +255,12 @@ internal fun RealConversationScreen(
                         showDeleteSelectedDialog = false
                     },
                 ) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.thread_delete), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteSelectedDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.action_cancel))
                 }
             },
         )

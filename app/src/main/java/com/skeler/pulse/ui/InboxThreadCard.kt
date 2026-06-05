@@ -83,6 +83,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
@@ -92,6 +93,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.skeler.pulse.InboxAccessState
+import com.skeler.pulse.R
 import com.skeler.pulse.contact.contactLookupIntent
 import com.skeler.pulse.contact.displayNameFor
 import com.skeler.pulse.contact.contactPhotoUriFor
@@ -275,7 +277,7 @@ internal fun SmsThreadCard(
             onDismissRequest = onDismissMenu,
         ) {
             SerafinaContextMenuItem(
-                text = if (isPinned) "Unpin" else "Pin",
+                text = if (isPinned) stringResource(R.string.thread_unpin) else stringResource(R.string.thread_pin),
                 icon = if (isPinned) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
                 onClick = {
                     onDismissMenu()
@@ -283,7 +285,7 @@ internal fun SmsThreadCard(
                 },
             )
             SerafinaContextMenuItem(
-                text = if (isArchived) "Unarchive" else "Archive",
+                text = if (isArchived) stringResource(R.string.thread_unarchive) else stringResource(R.string.thread_archive),
                 icon = Icons.Rounded.Archive,
                 onClick = {
                     onDismissMenu()
@@ -291,7 +293,7 @@ internal fun SmsThreadCard(
                 },
             )
             SerafinaContextMenuItem(
-                text = if (hasUnread) "Mark as read" else "Mark as unread",
+                text = if (hasUnread) stringResource(R.string.thread_mark_read) else stringResource(R.string.thread_mark_unread),
                 icon = Icons.Rounded.MarkunreadMailbox,
                 onClick = {
                     onDismissMenu()
@@ -299,7 +301,7 @@ internal fun SmsThreadCard(
                 },
             )
             SerafinaContextMenuItem(
-                text = "Block",
+                text = stringResource(R.string.thread_block),
                 icon = Icons.Rounded.Block,
                 contentColor = MaterialTheme.colorScheme.error,
                 onClick = {
@@ -309,7 +311,7 @@ internal fun SmsThreadCard(
             )
             SerafinaContextMenuDivider()
             SerafinaContextMenuItem(
-                text = "Delete",
+                text = stringResource(R.string.thread_delete),
                 icon = Icons.Rounded.Delete,
                 contentColor = MaterialTheme.colorScheme.error,
                 onClick = {
@@ -324,10 +326,10 @@ internal fun SmsThreadCard(
         AlertDialog(
             onDismissRequest = { shouldShowDeleteConfirmation = false },
             title = {
-                Text("Delete conversation?")
+                Text(stringResource(R.string.thread_delete_title))
             },
             text = {
-                Text("Delete the conversation with $displayName from this device? This can't be undone.")
+                Text(stringResource(R.string.thread_delete_body, displayName))
             },
             confirmButton = {
                 TextButton(
@@ -337,14 +339,14 @@ internal fun SmsThreadCard(
                     },
                 ) {
                     Text(
-                        text = "Delete",
+                        text = stringResource(R.string.thread_delete),
                         color = MaterialTheme.colorScheme.error,
                     )
                 }
             },
             dismissButton = {
                 TextButton(onClick = { shouldShowDeleteConfirmation = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.action_cancel))
                 }
             },
         )

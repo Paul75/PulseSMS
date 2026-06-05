@@ -1,5 +1,7 @@
 package com.skeler.pulse.ui
 
+import android.app.Activity
+import androidx.activity.compose.LocalActivity
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -34,6 +36,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Contrast
 import androidx.compose.material.icons.outlined.DarkMode
+import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Sms
 import androidx.compose.material.icons.rounded.Archive
@@ -45,6 +48,7 @@ import androidx.compose.material.icons.rounded.Fingerprint
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilledTonalButton
@@ -53,10 +57,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -72,12 +78,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import com.skeler.pulse.R
 import com.skeler.pulse.design.theme.SerafinaPalette
 import com.skeler.pulse.design.theme.SerafinaThemeMode
 import com.skeler.pulse.design.theme.SerafinaThemeViewModel
@@ -115,6 +123,7 @@ internal fun SettingsScreen(
     isDefaultSmsApp: Boolean,
 ) {
     val context = LocalContext.current
+    val activity = LocalActivity.current
     val themeState by themeViewModel.state.collectAsState()
     val coroutineScope = rememberCoroutineScope()
     val messageAutomationPreferences = remember(context) {
@@ -127,7 +136,7 @@ internal fun SettingsScreen(
     val appearanceOptionFlingBehavior = rememberMomentumFlingBehavior(enabled = !reducedMotion)
     val colorSchemeOptions = remember {
         buildList {
-            add(SettingsChoiceOption(id = "dynamic", label = "Dynamic"))
+            add(SettingsChoiceOption(id = "dynamic", label = context.getString(R.string.settings_dynamic)))
             addAll(
                 SerafinaPalette.entries.map { palette ->
                     SettingsChoiceOption(
@@ -141,7 +150,12 @@ internal fun SettingsScreen(
     }
     val themeOptions = remember {
         SerafinaThemeMode.entries.map { mode ->
-            SettingsChoiceOption(id = mode.name, label = mode.label)
+            val label = when (mode) {
+                SerafinaThemeMode.System -> context.getString(R.string.theme_mode_system)
+                SerafinaThemeMode.Light -> context.getString(R.string.theme_mode_light)
+                SerafinaThemeMode.Dark -> context.getString(R.string.theme_mode_dark)
+            }
+            SettingsChoiceOption(id = mode.name, label = label)
         }
     }
     val selectedColorSchemeId = if (themeState.dynamicColorEnabled) {
@@ -150,14 +164,15 @@ internal fun SettingsScreen(
         themeState.selectedPalette.name
     }
     val colorSchemeLabel = if (themeState.dynamicColorEnabled) {
-        "Dynamic"
+        stringResource(R.string.settings_dynamic)
     } else {
         themeState.selectedPalette.label
     }
+    var showLanguageDialog by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
-            SettingsTopBar(onBack = onBack)
+            SettingsTopBar(onBack = onBack, title = stringResource(R.string.settings_title))
         },
         containerColor = MaterialTheme.colorScheme.surface,
     ) { innerPadding ->
@@ -174,41 +189,41 @@ internal fun SettingsScreen(
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            item(key = "general_header") { SettingsSectionHeader("General") }
+            item(key = "general_header") { SettingsSectionHeader(stringResource(R.string.settings_general)) }
             item(key = "general_card") {
                 SettingsGroupCard {
                     SettingsRow(
                         icon = if (isDefaultSmsApp) Icons.Rounded.CheckCircle else Icons.Outlined.Sms,
-                        title = if (isDefaultSmsApp) "Default SMS app" else "Set as default",
-                        subtitle = if (isDefaultSmsApp) "Pulse is your default SMS app" else "Tap to set Pulse as default",
+                        title = if (isDefaultSmsApp) stringResource(R.string.settings_default_sms_app) else stringResource(R.string.settings_set_as_default),
+                        subtitle = if (isDefaultSmsApp) context.getString(R.string.settings_default_sms_subtitle) else context.getString(R.string.settings_tap_to_set_default),
                         onClick = onRequestDefaultSms,
                     )
                     SettingsGroupDivider()
                     SettingsRow(
                         icon = Icons.Rounded.Archive,
-                        title = "Archived chats",
-                        subtitle = if (archivedCount == 0) "No archived chats" else "$archivedCount archived chats",
+                        title = stringResource(R.string.settings_archived_chats),
+                        subtitle = if (archivedCount == 0) context.getString(R.string.settings_no_archived_chats) else context.resources.getQuantityString(R.plurals.settings_archived_count, archivedCount, archivedCount),
                         onClick = onOpenArchivedChats,
                     )
                     SettingsGroupDivider()
                     SettingsRow(
                         icon = Icons.Rounded.Fingerprint,
-                        title = "Security & Biometric",
-                        subtitle = "Fingerprint, password",
+                        title = stringResource(R.string.settings_security),
+                        subtitle = context.getString(R.string.settings_security_subtitle),
                         onClick = onOpenSecurity,
                     )
                     SettingsGroupDivider()
                     SettingsRow(
                         icon = Icons.Rounded.Block,
-                        title = "Blocked numbers",
-                        subtitle = if (blockedCount == 0) "No blocked senders" else "$blockedCount blocked senders",
+                        title = stringResource(R.string.settings_blocked_numbers),
+                        subtitle = if (blockedCount == 0) context.getString(R.string.settings_no_blocked_senders) else context.resources.getQuantityString(R.plurals.settings_blocked_count, blockedCount, blockedCount),
                         onClick = onOpenBlockedNumbers,
                     )
                     SettingsGroupDivider()
                     SettingsToggleRow(
                         icon = Icons.Rounded.ContentCopy,
-                        title = "Auto-copy codes",
-                        subtitle = "Copy OTP and business verification codes from incoming SMS when detected.",
+                        title = stringResource(R.string.settings_auto_copy_codes),
+                        subtitle = context.getString(R.string.settings_auto_copy_subtitle),
                         checked = autoCopyOtpCodes,
                         onToggle = {
                             coroutineScope.launch {
@@ -217,9 +232,16 @@ internal fun SettingsScreen(
                         },
                     )
                     SettingsGroupDivider()
+                    SettingsRow(
+                        icon = Icons.Outlined.Language,
+                        title = stringResource(R.string.settings_language),
+                        subtitle = localeDisplayName(context, themeState.selectedLocale),
+                        onClick = { showLanguageDialog = true },
+                    )
+                    SettingsGroupDivider()
                     SettingsChoiceRow(
                         icon = Icons.Outlined.Palette,
-                        title = "Color scheme",
+                        title = stringResource(R.string.settings_color_scheme),
                         subtitle = colorSchemeLabel,
                     ) {
                         SettingsChoiceRail(
@@ -245,8 +267,12 @@ internal fun SettingsScreen(
                     SettingsGroupDivider()
                     SettingsChoiceRow(
                         icon = Icons.Outlined.Contrast,
-                        title = "Theme",
-                        subtitle = themeState.themeMode.label,
+                        title = stringResource(R.string.settings_theme),
+                        subtitle = when (themeState.themeMode) {
+                            SerafinaThemeMode.System -> context.getString(R.string.theme_mode_system)
+                            SerafinaThemeMode.Light -> context.getString(R.string.theme_mode_light)
+                            SerafinaThemeMode.Dark -> context.getString(R.string.theme_mode_dark)
+                        },
                     ) {
                         SettingsChoiceRail(
                             options = themeOptions,
@@ -260,8 +286,8 @@ internal fun SettingsScreen(
                     SettingsGroupDivider()
                     SettingsToggleRow(
                         icon = Icons.Outlined.DarkMode,
-                        title = "Black theme only",
-                        subtitle = "Use pure black surfaces whenever the app is in dark mode.",
+                        title = stringResource(R.string.settings_black_theme),
+                        subtitle = context.getString(R.string.settings_black_theme_subtitle),
                         checked = themeState.blackThemeEnabled,
                         onToggle = { themeViewModel.setBlackThemeEnabled(!themeState.blackThemeEnabled) },
                     )
@@ -270,6 +296,71 @@ internal fun SettingsScreen(
             item(key = "bottom_spacer") { Spacer(Modifier.height(32.dp)) }
         }
     }
+
+    if (showLanguageDialog) {
+        LanguagePickerDialog(
+            currentLocale = themeState.selectedLocale,
+            onDismiss = { showLanguageDialog = false },
+            onSelect = { locale ->
+                showLanguageDialog = false
+                themeViewModel.setSelectedLocaleAndRecreate(locale)
+                activity?.recreate()
+            },
+        )
+    }
+}
+
+@Composable
+private fun LanguagePickerDialog(
+    currentLocale: String,
+    onDismiss: () -> Unit,
+    onSelect: (String) -> Unit,
+) {
+    val systemLabel = stringResource(R.string.settings_language_system)
+    val englishLabel = stringResource(R.string.settings_language_english)
+    val frenchLabel = stringResource(R.string.settings_language_french)
+    val options = remember(systemLabel, englishLabel, frenchLabel) {
+        listOf(
+            "system" to systemLabel,
+            "en" to englishLabel,
+            "fr" to frenchLabel,
+        )
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.settings_language)) },
+        text = {
+            Column {
+                options.forEach { (locale, label) ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelect(locale) }
+                            .padding(vertical = 12.dp, horizontal = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(
+                            selected = locale == currentLocale,
+                            onClick = { onSelect(locale) },
+                        )
+                        Spacer(Modifier.size(12.dp))
+                        Text(label, style = MaterialTheme.typography.bodyLarge)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.action_close))
+            }
+        },
+    )
+}
+
+private fun localeDisplayName(context: android.content.Context, locale: String): String = when (locale) {
+    "en" -> context.getString(R.string.settings_language_english_label)
+    "fr" -> context.getString(R.string.settings_language_french_label)
+    else -> context.getString(R.string.settings_language_system_label)
 }
 
 // ── Settings sub-components ──

@@ -71,12 +71,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import com.skeler.pulse.R
 import com.skeler.pulse.design.theme.SerafinaPalette
 import com.skeler.pulse.design.theme.SerafinaThemeMode
 import com.skeler.pulse.design.theme.SerafinaThemeViewModel
@@ -285,18 +287,18 @@ internal fun SecurityPasswordSection(
                     onClick = { if (passwordInput.isNotBlank()) { onSetPassword(passwordInput); passwordInput = ""; isEditing = false } },
                     enabled = passwordInput.isNotBlank(),
                     shape = RoundedCornerShape(12.dp),
-                ) { Text("Save") }
+                ) { Text(stringResource(R.string.action_save)) }
                 if (passwordSet && isEditing) {
                     FilledTonalButton(
                         onClick = { passwordInput = ""; isEditing = false },
                         shape = RoundedCornerShape(12.dp),
-                    ) { Text("Cancel") }
+                    ) { Text(stringResource(R.string.action_cancel)) }
                 }
             }
         } else {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                FilledTonalButton(onClick = { isEditing = true }, shape = RoundedCornerShape(12.dp)) { Text("Change") }
-                FilledTonalButton(onClick = { onClearPassword(); passwordInput = "" }, shape = RoundedCornerShape(12.dp)) { Text("Remove") }
+                FilledTonalButton(onClick = { isEditing = true }, shape = RoundedCornerShape(12.dp)) { Text(stringResource(R.string.action_change)) }
+                FilledTonalButton(onClick = { onClearPassword(); passwordInput = "" }, shape = RoundedCornerShape(12.dp)) { Text(stringResource(R.string.action_remove)) }
             }
         }
     }

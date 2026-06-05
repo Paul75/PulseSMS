@@ -68,7 +68,7 @@ object SmsNotificationHelper {
 
         if (messageId > 0) {
             val remoteInput = RemoteInput.Builder(SmsNotificationActionReceiver.KEY_REPLY_TEXT)
-                .setLabel("Reply")
+                .setLabel(context.getString(R.string.notification_action_reply))
                 .build()
 
             val replyIntent = Intent(context, SmsNotificationActionReceiver::class.java).apply {
@@ -82,7 +82,7 @@ object SmsNotificationHelper {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE,
             )
             val replyAction = NotificationCompat.Action.Builder(
-                R.drawable.ic_action_reply, "Reply", replyPendingIntent,
+                R.drawable.ic_action_reply, context.getString(R.string.notification_action_reply), replyPendingIntent,
             )
                 .addRemoteInput(remoteInput)
                 .setAllowGeneratedReplies(true)
@@ -91,12 +91,12 @@ object SmsNotificationHelper {
 
             builder.addAction(
                 R.drawable.ic_action_mark_read,
-                "Mark read",
+                context.getString(R.string.notification_action_mark_read),
                 createActionIntent(context, SmsNotificationActionReceiver.ACTION_MARK_READ, messageId, notificationId),
             )
             builder.addAction(
                 R.drawable.ic_action_delete,
-                "Delete",
+                context.getString(R.string.notification_action_delete),
                 createActionIntent(context, SmsNotificationActionReceiver.ACTION_DELETE, messageId, notificationId),
             )
         }
