@@ -67,14 +67,11 @@ internal class SystemSmsSender(
 
     private fun updateOutgoingMessage(messageUri: Uri?, messageType: Int) {
         if (messageUri == null) return
-        val status = if (messageType == Telephony.Sms.MESSAGE_TYPE_SENT) {
-            Telephony.Sms.STATUS_COMPLETE
-        } else {
-            Telephony.Sms.STATUS_FAILED
-        }
         val values = ContentValues().apply {
             put(Telephony.Sms.TYPE, messageType)
-            put(Telephony.Sms.STATUS, status)
+            if (messageType == Telephony.Sms.MESSAGE_TYPE_FAILED) {
+                put(Telephony.Sms.STATUS, Telephony.Sms.STATUS_FAILED)
+            }
         }
         contentResolver.update(messageUri, values, null, null)
     }

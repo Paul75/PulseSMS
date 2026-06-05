@@ -282,6 +282,13 @@ internal fun ConversationMessageBubble(
                             contentColor = colors.onErrorContainer,
                         )
                     }
+                    if (message.isDeliveryFailed()) {
+                        StatusPill(
+                            label = stringResource(R.string.conversation_message_not_delivered),
+                            containerColor = colors.errorContainer,
+                            contentColor = colors.onErrorContainer,
+                        )
+                    }
                     if (isImportant) {
                         StatusPill(
                             label = stringResource(R.string.conversation_message_kept),
@@ -298,6 +305,13 @@ internal fun ConversationMessageBubble(
                             else -> colors.onSurfaceVariant
                         },
                     )
+                    if (message.isSentAndDelivered()) {
+                        Text(
+                            text = stringResource(R.string.conversation_message_delivered),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = colors.onSurfaceVariant.copy(alpha = 0.7f),
+                        )
+                    }
                 }
             }
         }

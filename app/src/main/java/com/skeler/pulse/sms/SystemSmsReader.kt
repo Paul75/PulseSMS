@@ -306,6 +306,7 @@ class SystemSmsReader(
             Telephony.Sms.TYPE,
             Telephony.Sms.READ,
             Telephony.Sms.THREAD_ID,
+            Telephony.Sms.STATUS,
         )
     }
 }

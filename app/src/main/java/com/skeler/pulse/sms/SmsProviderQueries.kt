@@ -72,6 +72,7 @@ internal class SmsCursorColumns(cursor: Cursor) {
     val type: Int = cursor.getColumnIndexOrThrow(Telephony.Sms.TYPE)
     val read: Int = cursor.getColumnIndexOrThrow(Telephony.Sms.READ)
     val threadId: Int = cursor.getColumnIndexOrThrow(Telephony.Sms.THREAD_ID)
+    val status: Int = cursor.getColumnIndexOrThrow(Telephony.Sms.STATUS)
 }
 
 internal fun Cursor.toSystemSms(columns: SmsCursorColumns): SystemSms = SystemSms(
@@ -82,6 +83,7 @@ internal fun Cursor.toSystemSms(columns: SmsCursorColumns): SystemSms = SystemSm
     type = getInt(columns.type),
     read = getInt(columns.read) == 1,
     threadId = getLong(columns.threadId),
+    status = getInt(columns.status),
 )
 
 internal fun SystemSms.resolvedThreadId(): Long =

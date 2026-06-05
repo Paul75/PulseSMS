@@ -297,6 +297,12 @@ internal fun shouldShowMessageBlockAction(isOutbound: Boolean): Boolean = !isOut
 
 internal fun SystemSms.hasFailedDelivery(): Boolean = type == Telephony.Sms.MESSAGE_TYPE_FAILED
 
+internal fun SystemSms.isSentAndDelivered(): Boolean =
+    type == Telephony.Sms.MESSAGE_TYPE_SENT && status == Telephony.Sms.STATUS_COMPLETE
+
+internal fun SystemSms.isDeliveryFailed(): Boolean =
+    type == Telephony.Sms.MESSAGE_TYPE_SENT && status == Telephony.Sms.STATUS_FAILED
+
 internal fun draftAfterSendState(currentDraft: String, sendState: SendState): String = when (sendState) {
     is SendState.Sent -> ""
     is SendState.Failed -> currentDraft.ifBlank { sendState.body }
