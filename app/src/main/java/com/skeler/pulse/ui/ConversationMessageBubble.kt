@@ -205,7 +205,14 @@ internal fun ConversationMessageBubble(
     val onLongClickAction: (() -> Unit)? = if (isSelectionMode) ({ onToggleSelection() }) else onLongPress
 
     Row(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .combinedClickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClickAction,
+                onLongClick = onLongClickAction,
+            ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (isSelectionMode) {
@@ -228,13 +235,7 @@ internal fun ConversationMessageBubble(
                 .graphicsLayer {
                     scaleX = bubbleScale
                     scaleY = bubbleScale
-                }
-                .combinedClickable(
-                    interactionSource = interactionSource,
-                    indication = null,
-                    onClick = onClickAction,
-                    onLongClick = onLongClickAction,
-                ),
+                },
         ) {
             Column(
                 horizontalAlignment = if (isOutbound) Alignment.End else Alignment.Start,
