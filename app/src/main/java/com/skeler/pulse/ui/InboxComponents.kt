@@ -82,6 +82,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
@@ -98,6 +99,7 @@ import com.skeler.pulse.design.component.StatusPill
 import com.skeler.pulse.design.util.elasticOverscroll
 import com.skeler.pulse.design.util.motionAnimateItemModifier
 import com.skeler.pulse.design.util.rememberEntranceModifier
+import com.skeler.pulse.R
 import com.skeler.pulse.design.util.rememberReducedMotionEnabled
 import com.skeler.pulse.design.util.rememberSmoothFlingBehavior
 import com.skeler.pulse.sms.SmsThread
@@ -121,26 +123,26 @@ internal fun InboxOnboardingScreen(
     val statusLabel: String
 
     if (accessState.permissionDenied) {
-        title = "Unlock your inbox"
-        body = "Pulse needs SMS access before it can read threads, open drafts, and route you into the right conversation."
-        ctaLabel = "Grant permissions"
+        title = stringResource(R.string.inbox_unlock_title)
+        body = stringResource(R.string.inbox_unlock_body)
+        ctaLabel = stringResource(R.string.inbox_unlock_cta)
         ctaIcon = Icons.Rounded.Key
         onCtaClick = onRequestSmsPermissions
-        statusLabel = "SMS permission required"
+        statusLabel = stringResource(R.string.inbox_unlock_status)
     } else if (isAlreadyDefault) {
-        title = "Pulse is your default app"
-        body = "Android is ready to route SMS messages to Pulse. Everything is set up correctly."
-        ctaLabel = "Manage default app"
+        title = stringResource(R.string.inbox_default_active_title)
+        body = stringResource(R.string.inbox_default_active_body)
+        ctaLabel = stringResource(R.string.inbox_default_active_cta)
         ctaIcon = Icons.Rounded.CheckCircle
         onCtaClick = onRequestDefaultSms
-        statusLabel = "Default SMS app active"
+        statusLabel = stringResource(R.string.inbox_default_active_status)
     } else {
-        title = "Make Pulse your default"
-        body = "Set Pulse as your default SMS app so Android can hand off compose requests, send reliably, and keep your inbox in one place."
-        ctaLabel = "Set as default"
+        title = stringResource(R.string.inbox_default_required_title)
+        body = stringResource(R.string.inbox_default_required_body)
+        ctaLabel = stringResource(R.string.inbox_default_required_cta)
         ctaIcon = Icons.Rounded.MarkunreadMailbox
         onCtaClick = onRequestDefaultSms
-        statusLabel = "Default SMS app required"
+        statusLabel = stringResource(R.string.inbox_default_required_status)
     }
 
     val colors = MaterialTheme.colorScheme
@@ -230,7 +232,7 @@ internal fun InboxOnboardingScreen(
                                 tonalElevation = 0.dp,
                             ) {
                                 Text(
-                                    text = "A requested conversation is waiting. Pulse will open it as soon as setup is complete.",
+                                    text = stringResource(R.string.inbox_pending_launch_body),
                                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onTertiaryContainer,
