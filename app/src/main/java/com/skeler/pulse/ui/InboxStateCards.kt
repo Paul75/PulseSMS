@@ -82,6 +82,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
@@ -98,6 +99,7 @@ import com.skeler.pulse.design.component.StatusPill
 import com.skeler.pulse.design.util.elasticOverscroll
 import com.skeler.pulse.design.util.motionAnimateItemModifier
 import com.skeler.pulse.design.util.rememberEntranceModifier
+import com.skeler.pulse.R
 import com.skeler.pulse.design.util.rememberReducedMotionEnabled
 import com.skeler.pulse.design.util.rememberSmoothFlingBehavior
 import com.skeler.pulse.sms.SmsThread
@@ -145,11 +147,11 @@ internal fun InboxFilteredEmptyStateCard(
     modifier: Modifier = Modifier,
 ) {
     InboxStateCard(
-        title = "Nothing in $activeFilter",
-        body = "This filter is clear right now. Switch back to the full inbox to see every thread again.",
-        statusLabel = "$activeFilter filter",
+        title = stringResource(R.string.inbox_nothing_in_filter, activeFilter),
+        body = stringResource(R.string.inbox_filter_empty_body),
+        statusLabel = stringResource(R.string.inbox_filter_status, activeFilter),
         icon = Icons.Rounded.Search,
-        actionLabel = "Show all",
+        actionLabel = stringResource(R.string.inbox_show_all),
         onAction = onShowAll,
         modifier = modifier,
     )
@@ -162,11 +164,11 @@ internal fun InboxErrorStateCard(
     modifier: Modifier = Modifier,
 ) {
     InboxStateCard(
-        title = "Inbox unavailable",
+        title = stringResource(R.string.inbox_unavailable),
         body = message,
-        statusLabel = "Read problem",
+        statusLabel = stringResource(R.string.inbox_read_problem),
         icon = Icons.Rounded.ErrorOutline,
-        actionLabel = "Try again",
+        actionLabel = stringResource(R.string.inbox_try_again),
         onAction = onRetry,
         modifier = modifier,
     )

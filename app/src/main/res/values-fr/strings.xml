@@ -68,6 +68,13 @@
     <string name="inbox_filter_personal">Personnel</string>
     <string name="inbox_filter_business">Pro</string>
     <string name="inbox_filter_otp">OTP</string>
+    <string name="inbox_nothing_in_filter">Rien dans %1$s</string>
+    <string name="inbox_filter_status">Filtre %1$s</string>
+    <string name="inbox_filter_empty_body">Ce filtre est vide pour le moment. Revenez à la boîte complète pour voir toutes les conversations.</string>
+    <string name="inbox_show_all">Tout afficher</string>
+    <string name="inbox_unavailable">Boîte de réception indisponible</string>
+    <string name="inbox_read_problem">Problème de lecture</string>
+    <string name="inbox_try_again">Réessayer</string>
     <string name="settings_default_sms_subtitle">Pulse est votre appli SMS par défaut</string>
     <string name="settings_tap_to_set_default">Définir Pulse par défaut</string>
     <string name="settings_no_archived_chats">Aucune conversation archivée</string>

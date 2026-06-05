@@ -68,6 +68,13 @@
     <string name="inbox_filter_personal">Personal</string>
     <string name="inbox_filter_business">Business</string>
     <string name="inbox_filter_otp">OTP</string>
+    <string name="inbox_nothing_in_filter">Nothing in %1$s</string>
+    <string name="inbox_filter_status">%1$s filter</string>
+    <string name="inbox_filter_empty_body">This filter is clear right now. Switch back to the full inbox to see every thread again.</string>
+    <string name="inbox_show_all">Show all</string>
+    <string name="inbox_unavailable">Inbox unavailable</string>
+    <string name="inbox_read_problem">Read problem</string>
+    <string name="inbox_try_again">Try again</string>
     <string name="settings_default_sms_subtitle">Pulse is your default SMS app</string>
     <string name="settings_tap_to_set_default">Tap to set Pulse as default</string>
     <string name="settings_no_archived_chats">No archived chats</string>
