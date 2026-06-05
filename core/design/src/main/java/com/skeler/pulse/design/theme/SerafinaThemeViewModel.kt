@@ -107,4 +107,10 @@ class SerafinaThemeViewModel(application: Application) : AndroidViewModel(applic
             prefs.setSelectedLocale(locale)
         }
     }
+
+    fun setSelectedLocaleAndRecreate(locale: String) {
+        runBlocking {
+            prefs.setSelectedLocale(locale)
+        }
+    }
 }

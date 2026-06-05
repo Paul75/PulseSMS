@@ -294,7 +294,7 @@ internal fun SettingsScreen(
             onDismiss = { showLanguageDialog = false },
             onSelect = { locale ->
                 showLanguageDialog = false
-                themeViewModel.setSelectedLocale(locale)
+                themeViewModel.setSelectedLocaleAndRecreate(locale)
                 activity?.recreate()
             },
         )
