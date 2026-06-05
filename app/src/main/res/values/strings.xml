@@ -95,6 +95,9 @@
     <string name="archived_empty_body">Archive a conversation from the inbox to keep it out of your primary list without deleting it.</string>
     <string name="archived_empty_status">Archive empty</string>
     <string name="archived_back_to_inbox">Back to inbox</string>
+    <string name="mms_sender_label">MMS</string>
+    <string name="mms_body_placeholder">New multimedia message received</string>
+    <string name="mms_body_save_failed">New multimedia message received, but Pulse couldn\'t save it yet.</string>
     <string name="settings_default_sms_subtitle">Pulse is your default SMS app</string>
     <string name="settings_tap_to_set_default">Tap to set Pulse as default</string>
     <string name="settings_no_archived_chats">No archived chats</string>
