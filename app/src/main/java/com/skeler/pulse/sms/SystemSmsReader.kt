@@ -137,16 +137,24 @@ class SystemSmsReader(
             }
         }
 
-        return threads.values.map { accumulator ->
-            SmsThread(
-                threadId = accumulator.threadId,
-                address = accumulator.address,
-                snippet = accumulator.snippet,
-                date = accumulator.date,
-                messageCount = accumulator.messageCount,
-                unreadCount = accumulator.unreadCount,
-            )
-        }
+        val merged = threads.values
+            .groupBy { it.address }
+            .values
+            .map { group ->
+                val latest = group.maxBy { it.date }
+                SmsThread(
+                    threadId = group.firstOrNull { it.threadId > 0L }?.threadId
+                        ?: group.first().threadId,
+                    address = latest.address,
+                    snippet = latest.snippet,
+                    date = latest.date,
+                    messageCount = group.sumOf { it.messageCount },
+                    unreadCount = group.sumOf { it.unreadCount },
+                )
+            }
+            .sortedByDescending { it.date }
+
+        return merged
     }
 
     /**
