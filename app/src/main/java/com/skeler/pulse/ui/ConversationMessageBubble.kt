@@ -32,7 +32,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -143,7 +142,6 @@ internal fun ConversationMessageBubble(
     isImportant: Boolean,
     isSelected: Boolean,
     isSelectionMode: Boolean,
-    accentColor: Color = Color.Transparent,
     onLongPress: () -> Unit,
     onCopyCode: (String) -> Unit,
     onToggleSelection: () -> Unit,
@@ -254,28 +252,18 @@ internal fun ConversationMessageBubble(
                     tonalElevation = bubbleElevation,
                     shadowElevation = bubbleElevation,
                 ) {
-                    Row(modifier = Modifier.height(IntrinsicSize.Min)) {
-                        if (accentColor != Color.Transparent) {
-                            Box(
-                                modifier = Modifier
-                                    .width(4.dp)
-                                    .height(IntrinsicSize.Min)
-                                    .background(accentColor.copy(alpha = 0.40f)),
-                            )
-                        }
-                        Text(
-                            text = messageLinkText,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                            style = MaterialTheme.typography.bodyLarge.copy(
-                                fontWeight = if (isUnread) FontWeight.Medium else FontWeight.Normal,
-                            ),
-                            color = when {
-                                hasFailedDelivery -> colors.onErrorContainer
-                                isOutbound -> colors.onPrimaryContainer
-                                else -> colors.onSurface
-                            },
-                        )
-                    }
+                    Text(
+                        text = messageLinkText,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                        style = MaterialTheme.typography.bodyLarge.copy(
+                            fontWeight = if (isUnread) FontWeight.Medium else FontWeight.Normal,
+                        ),
+                        color = when {
+                            hasFailedDelivery -> colors.onErrorContainer
+                            isOutbound -> colors.onPrimaryContainer
+                            else -> colors.onSurface
+                        },
+                    )
                 }
                 copyableCode?.let { code ->
                     CopyCodeButton(

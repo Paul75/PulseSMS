@@ -32,7 +32,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -218,8 +217,7 @@ internal fun RealConversationScreen(
     }
 
     val conversationBackdropBrush = conversationBackdropBrush()
-    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
-    val accentColors = remember(address) { addressToConversationAccentColors(address, isDark) }
+    val conversationAvatarColors = MaterialTheme.colorScheme.conversationAvatarColors(title)
 
     if (shouldShowDiscardDraftDialog) {
         AlertDialog(
@@ -295,7 +293,7 @@ internal fun RealConversationScreen(
                     messages = messages,
                     unreadCount = unreadCount,
                     importantCount = importantCount,
-                    avatarColors = accentColors,
+                    avatarColors = conversationAvatarColors,
                     onBack = ::requestBackNavigation,
                     onCallAddress = onCallAddress,
                 )
@@ -355,7 +353,7 @@ internal fun RealConversationScreen(
                     unreadCount = unreadCount,
                     importantCount = importantCount,
                     latestTimestamp = messages.lastOrNull()?.timestamp,
-                    avatarColors = accentColors,
+                    avatarColors = conversationAvatarColors,
                     loading = loading,
                     timelineItems = timelineItems,
                     importantMessageIds = importantMessageIds,

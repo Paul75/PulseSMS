@@ -81,7 +81,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -130,8 +129,6 @@ internal fun SmsThreadCard(
     val displayName = remember(thread.address) { displayNameFor(context, thread.address) }
     val initials = displayName.toAvatarInitials()
     val photoUri = remember(thread.address) { contactPhotoUriFor(context, thread.address) }
-    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
-    val colors = remember(thread.address) { addressToConversationAccentColors(thread.address, isDark) }
     val hasUnread = thread.unreadCount > 0
     var shouldShowDeleteConfirmation by rememberSaveable(thread.threadId, thread.address) {
         mutableStateOf(false)
@@ -221,7 +218,7 @@ internal fun SmsThreadCard(
                         ),
                     contentAlignment = Alignment.Center,
                 ) {
-                    SerafinaAvatar(imageUrl = photoUri?.toString(), initials = initials, hasUnread = hasUnread, size = 48.dp, containerColor = colors.containerColor, contentColor = colors.contentColor)
+                    SerafinaAvatar(imageUrl = photoUri?.toString(), initials = initials, hasUnread = hasUnread, size = 48.dp)
                 }
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Row(
