@@ -340,7 +340,7 @@ internal fun ConversationSelectionTopBar(
     onDelete: () -> Unit,
 ) {
     CenterAlignedTopAppBar(
-        title = { Text("$selectedCount selected") },
+        title = { Text(stringResource(R.string.conversation_selected_count, selectedCount)) },
         navigationIcon = {
             IconButton(onClick = onClose) {
                 Icon(

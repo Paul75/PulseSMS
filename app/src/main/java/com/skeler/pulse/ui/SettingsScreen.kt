@@ -190,35 +190,35 @@ internal fun SettingsScreen(
                     SettingsRow(
                         icon = if (isDefaultSmsApp) Icons.Rounded.CheckCircle else Icons.Outlined.Sms,
                         title = if (isDefaultSmsApp) stringResource(R.string.settings_default_sms_app) else stringResource(R.string.settings_set_as_default),
-                        subtitle = if (isDefaultSmsApp) "Pulse is your default SMS app" else "Tap to set Pulse as default",
+                        subtitle = if (isDefaultSmsApp) context.getString(R.string.settings_default_sms_subtitle) else context.getString(R.string.settings_tap_to_set_default),
                         onClick = onRequestDefaultSms,
                     )
                     SettingsGroupDivider()
                     SettingsRow(
                         icon = Icons.Rounded.Archive,
                         title = stringResource(R.string.settings_archived_chats),
-                        subtitle = if (archivedCount == 0) "No archived chats" else "$archivedCount archived chats",
+                        subtitle = if (archivedCount == 0) context.getString(R.string.settings_no_archived_chats) else context.getString(R.string.settings_archived_count, archivedCount),
                         onClick = onOpenArchivedChats,
                     )
                     SettingsGroupDivider()
                     SettingsRow(
                         icon = Icons.Rounded.Fingerprint,
                         title = stringResource(R.string.settings_security),
-                        subtitle = "Fingerprint, password",
+                        subtitle = context.getString(R.string.settings_security_subtitle),
                         onClick = onOpenSecurity,
                     )
                     SettingsGroupDivider()
                     SettingsRow(
                         icon = Icons.Rounded.Block,
                         title = stringResource(R.string.settings_blocked_numbers),
-                        subtitle = if (blockedCount == 0) "No blocked senders" else "$blockedCount blocked senders",
+                        subtitle = if (blockedCount == 0) context.getString(R.string.settings_no_blocked_senders) else context.getString(R.string.settings_blocked_count, blockedCount),
                         onClick = onOpenBlockedNumbers,
                     )
                     SettingsGroupDivider()
                     SettingsToggleRow(
                         icon = Icons.Rounded.ContentCopy,
                         title = stringResource(R.string.settings_auto_copy_codes),
-                        subtitle = "Copy OTP and business verification codes from incoming SMS when detected.",
+                        subtitle = context.getString(R.string.settings_auto_copy_subtitle),
                         checked = autoCopyOtpCodes,
                         onToggle = {
                             coroutineScope.launch {
@@ -230,7 +230,7 @@ internal fun SettingsScreen(
                     SettingsRow(
                         icon = Icons.Outlined.Language,
                         title = stringResource(R.string.settings_language),
-                        subtitle = localeDisplayName(themeState.selectedLocale),
+                        subtitle = localeDisplayName(context, themeState.selectedLocale),
                         onClick = { showLanguageDialog = true },
                     )
                     SettingsGroupDivider()
@@ -278,7 +278,7 @@ internal fun SettingsScreen(
                     SettingsToggleRow(
                         icon = Icons.Outlined.DarkMode,
                         title = stringResource(R.string.settings_black_theme),
-                        subtitle = "Use pure black surfaces whenever the app is in dark mode.",
+                        subtitle = context.getString(R.string.settings_black_theme_subtitle),
                         checked = themeState.blackThemeEnabled,
                         onToggle = { themeViewModel.setBlackThemeEnabled(!themeState.blackThemeEnabled) },
                     )
@@ -348,10 +348,10 @@ private fun LanguagePickerDialog(
     )
 }
 
-private fun localeDisplayName(locale: String): String = when (locale) {
-    "en" -> "English"
-    "fr" -> "Français"
-    else -> "System default"
+private fun localeDisplayName(context: android.content.Context, locale: String): String = when (locale) {
+    "en" -> context.getString(R.string.settings_language_english_label)
+    "fr" -> context.getString(R.string.settings_language_french_label)
+    else -> context.getString(R.string.settings_language_system_label)
 }
 
 // ── Settings sub-components ──
