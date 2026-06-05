@@ -71,10 +71,16 @@
     <string name="settings_default_sms_subtitle">Pulse est votre appli SMS par défaut</string>
     <string name="settings_tap_to_set_default">Définir Pulse par défaut</string>
     <string name="settings_no_archived_chats">Aucune conversation archivée</string>
-    <string name="settings_archived_count">%d conversation(s) archivée(s)</string>
+    <plurals name="settings_archived_count">
+        <item quantity="one">1 conversation archivée</item>
+        <item quantity="other">%d conversations archivées</item>
+    </plurals>
     <string name="settings_security_subtitle">Empreinte, mot de passe</string>
     <string name="settings_no_blocked_senders">Aucun expéditeur bloqué</string>
-    <string name="settings_blocked_count">%d expéditeur(s) bloqué(s)</string>
+    <plurals name="settings_blocked_count">
+        <item quantity="one">1 expéditeur bloqué</item>
+        <item quantity="other">%d expéditeurs bloqués</item>
+    </plurals>
     <string name="settings_auto_copy_subtitle">Copier automatiquement les codes OTP et de vérification professionnelle depuis les SMS entrants.</string>
     <string name="settings_black_theme_subtitle">Utiliser des surfaces noir pur en mode sombre.</string>
     <string name="settings_language_system_label">Langue du système</string>
@@ -101,6 +107,12 @@
     <string name="notification_action_reply">Répondre</string>
     <string name="notification_action_delete">Supprimer</string>
     <string name="conversation_delete_title">Supprimer les messages</string>
-    <string name="conversation_delete_body">Supprimer %d message(s) sélectionné(s) ?</string>
-    <string name="conversation_selected_count">%d sélectionné(s)</string>
+    <plurals name="conversation_delete_body">
+        <item quantity="one">Supprimer 1 message sélectionné ?</item>
+        <item quantity="other">Supprimer %d messages sélectionnés ?</item>
+    </plurals>
+    <plurals name="conversation_selected_count">
+        <item quantity="one">1 sélectionné</item>
+        <item quantity="other">%d sélectionnés</item>
+    </plurals>
 </resources>

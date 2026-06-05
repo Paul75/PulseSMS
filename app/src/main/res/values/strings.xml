@@ -71,10 +71,16 @@
     <string name="settings_default_sms_subtitle">Pulse is your default SMS app</string>
     <string name="settings_tap_to_set_default">Tap to set Pulse as default</string>
     <string name="settings_no_archived_chats">No archived chats</string>
-    <string name="settings_archived_count">%d archived chats</string>
+    <plurals name="settings_archived_count">
+        <item quantity="one">1 archived chat</item>
+        <item quantity="other">%d archived chats</item>
+    </plurals>
     <string name="settings_security_subtitle">Fingerprint, password</string>
     <string name="settings_no_blocked_senders">No blocked senders</string>
-    <string name="settings_blocked_count">%d blocked senders</string>
+    <plurals name="settings_blocked_count">
+        <item quantity="one">1 blocked sender</item>
+        <item quantity="other">%d blocked senders</item>
+    </plurals>
     <string name="settings_auto_copy_subtitle">Copy OTP and business verification codes from incoming SMS when detected.</string>
     <string name="settings_black_theme_subtitle">Use pure black surfaces whenever the app is in dark mode.</string>
     <string name="settings_language_system_label">System default</string>
@@ -101,6 +107,12 @@
     <string name="notification_action_reply">Reply</string>
     <string name="notification_action_delete">Delete</string>
     <string name="conversation_delete_title">Delete messages</string>
-    <string name="conversation_delete_body">Delete %d selected message(s)?</string>
-    <string name="conversation_selected_count">%d selected</string>
+    <plurals name="conversation_delete_body">
+        <item quantity="one">Delete 1 selected message?</item>
+        <item quantity="other">Delete %d selected messages?</item>
+    </plurals>
+    <plurals name="conversation_selected_count">
+        <item quantity="one">1 selected</item>
+        <item quantity="other">%d selected</item>
+    </plurals>
 </resources>

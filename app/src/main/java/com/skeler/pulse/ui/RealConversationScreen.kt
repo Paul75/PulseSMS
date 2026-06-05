@@ -35,6 +35,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.skeler.pulse.R
@@ -245,7 +246,7 @@ internal fun RealConversationScreen(
         AlertDialog(
             onDismissRequest = { showDeleteSelectedDialog = false },
             title = { Text(stringResource(R.string.conversation_delete_title)) },
-            text = { Text(stringResource(R.string.conversation_delete_body, selectedMessageIds.size)) },
+            text = { Text(pluralStringResource(R.plurals.conversation_delete_body, selectedMessageIds.size, selectedMessageIds.size)) },
             confirmButton = {
                 TextButton(
                     onClick = {

@@ -202,7 +202,7 @@ internal fun SettingsScreen(
                     SettingsRow(
                         icon = Icons.Rounded.Archive,
                         title = stringResource(R.string.settings_archived_chats),
-                        subtitle = if (archivedCount == 0) context.getString(R.string.settings_no_archived_chats) else context.getString(R.string.settings_archived_count, archivedCount),
+                        subtitle = if (archivedCount == 0) context.getString(R.string.settings_no_archived_chats) else context.resources.getQuantityString(R.plurals.settings_archived_count, archivedCount, archivedCount),
                         onClick = onOpenArchivedChats,
                     )
                     SettingsGroupDivider()
@@ -216,7 +216,7 @@ internal fun SettingsScreen(
                     SettingsRow(
                         icon = Icons.Rounded.Block,
                         title = stringResource(R.string.settings_blocked_numbers),
-                        subtitle = if (blockedCount == 0) context.getString(R.string.settings_no_blocked_senders) else context.getString(R.string.settings_blocked_count, blockedCount),
+                        subtitle = if (blockedCount == 0) context.getString(R.string.settings_no_blocked_senders) else context.resources.getQuantityString(R.plurals.settings_blocked_count, blockedCount, blockedCount),
                         onClick = onOpenBlockedNumbers,
                     )
                     SettingsGroupDivider()
