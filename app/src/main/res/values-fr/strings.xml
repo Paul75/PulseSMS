@@ -88,6 +88,10 @@
     <string name="inbox_default_required_cta">Définir par défaut</string>
     <string name="inbox_default_required_status">Appli SMS par défaut requise</string>
     <string name="inbox_pending_launch_body">Une conversation demandée est en attente. Pulse l\'ouvrira dès que la configuration sera terminée.</string>
+    <string name="conversation_discard_draft_title">Abandonner le brouillon ?</string>
+    <string name="conversation_discard_draft_body">Vous avez un message non envoyé. Quitter et abandonner cette conversation ?</string>
+    <string name="conversation_discard_confirm">Abandonner</string>
+    <string name="conversation_discard_cancel">Continuer la rédaction</string>
     <string name="settings_default_sms_subtitle">Pulse est votre appli SMS par défaut</string>
     <string name="settings_tap_to_set_default">Définir Pulse par défaut</string>
     <string name="settings_no_archived_chats">Aucune conversation archivée</string>

@@ -88,6 +88,10 @@
     <string name="inbox_default_required_cta">Set as default</string>
     <string name="inbox_default_required_status">Default SMS app required</string>
     <string name="inbox_pending_launch_body">A requested conversation is waiting. Pulse will open it as soon as setup is complete.</string>
+    <string name="conversation_discard_draft_title">Discard draft?</string>
+    <string name="conversation_discard_draft_body">You have an unsent message. Leave this conversation and discard it?</string>
+    <string name="conversation_discard_confirm">Discard</string>
+    <string name="conversation_discard_cancel">Keep editing</string>
     <string name="settings_default_sms_subtitle">Pulse is your default SMS app</string>
     <string name="settings_tap_to_set_default">Tap to set Pulse as default</string>
     <string name="settings_no_archived_chats">No archived chats</string>

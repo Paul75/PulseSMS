@@ -116,6 +116,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.skeler.pulse.R
+import com.skeler.pulse.contact.normalizeAddressForDisplay
 import com.skeler.pulse.design.component.SerafinaAvatar
 import com.skeler.pulse.design.component.SerafinaProgressIndicator
 import com.skeler.pulse.design.component.StatusPill
@@ -292,6 +293,25 @@ internal data class ConversationAvatarColors(
     val containerColor: Color,
     val contentColor: Color,
 )
+
+internal data class ConversationAccentColors(
+    val containerColor: Color,
+    val contentColor: Color,
+    val accentColor: Color,
+)
+
+internal fun addressToConversationAccentColors(address: String, isDark: Boolean): ConversationAccentColors {
+    val normalized = address.trim().normalizeAddressForDisplay()
+    val hue = ((normalized.hashCode() and 0x7fffffff) % 360).toFloat()
+    val accent = Color.hsl(hue, 0.58f, if (isDark) 0.65f else 0.42f)
+    val container = Color.hsl(hue, 0.28f, if (isDark) 0.18f else 0.86f)
+    val onContainer = Color.hsl(hue, 0.08f, if (isDark) 0.90f else 0.14f)
+    return ConversationAccentColors(
+        containerColor = container,
+        contentColor = onContainer,
+        accentColor = accent,
+    )
+}
 
 internal fun shouldShowMessageBlockAction(isOutbound: Boolean): Boolean = !isOutbound
 

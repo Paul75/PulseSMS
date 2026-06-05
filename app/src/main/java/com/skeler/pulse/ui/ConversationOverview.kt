@@ -144,7 +144,7 @@ internal fun ConversationOverviewCard(
     unreadCount: Int,
     importantCount: Int,
     latestTimestamp: Instant?,
-    avatarColors: ConversationAvatarColors,
+    avatarColors: ConversationAccentColors,
     modifier: Modifier = Modifier,
 ) {
     Surface(

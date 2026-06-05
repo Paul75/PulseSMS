@@ -32,6 +32,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -217,13 +218,14 @@ internal fun RealConversationScreen(
     }
 
     val conversationBackdropBrush = conversationBackdropBrush()
-    val conversationAvatarColors = MaterialTheme.colorScheme.conversationAvatarColors(title)
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val accentColors = remember(address) { addressToConversationAccentColors(address, isDark) }
 
     if (shouldShowDiscardDraftDialog) {
         AlertDialog(
             onDismissRequest = { shouldShowDiscardDraftDialog = false },
-            title = { Text("Discard draft?") },
-            text = { Text("You have an unsent message. Leave this conversation and discard it?") },
+            title = { Text(stringResource(R.string.conversation_discard_draft_title)) },
+            text = { Text(stringResource(R.string.conversation_discard_draft_body)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -231,12 +233,12 @@ internal fun RealConversationScreen(
                         onBack()
                     },
                 ) {
-                    Text("Discard")
+                    Text(stringResource(R.string.conversation_discard_confirm))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { shouldShowDiscardDraftDialog = false }) {
-                    Text("Keep editing")
+                    Text(stringResource(R.string.conversation_discard_cancel))
                 }
             },
         )
@@ -293,7 +295,7 @@ internal fun RealConversationScreen(
                     messages = messages,
                     unreadCount = unreadCount,
                     importantCount = importantCount,
-                    avatarColors = conversationAvatarColors,
+                    avatarColors = accentColors,
                     onBack = ::requestBackNavigation,
                     onCallAddress = onCallAddress,
                 )
@@ -353,7 +355,7 @@ internal fun RealConversationScreen(
                     unreadCount = unreadCount,
                     importantCount = importantCount,
                     latestTimestamp = messages.lastOrNull()?.timestamp,
-                    avatarColors = conversationAvatarColors,
+                    avatarColors = accentColors,
                     loading = loading,
                     timelineItems = timelineItems,
                     importantMessageIds = importantMessageIds,

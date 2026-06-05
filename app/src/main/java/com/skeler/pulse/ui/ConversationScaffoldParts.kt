@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -60,7 +61,7 @@ internal fun ConversationTopBar(
     messages: List<SystemSms>,
     unreadCount: Int,
     importantCount: Int,
-    avatarColors: ConversationAvatarColors,
+    avatarColors: ConversationAccentColors,
     onBack: () -> Unit,
     onCallAddress: () -> Unit,
 ) {
@@ -141,6 +142,12 @@ internal fun ConversationTopBar(
                         )
                     }
                 }
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(2.dp)
+                        .background(avatarColors.accentColor.copy(alpha = 0.30f)),
+                )
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(
@@ -221,7 +228,7 @@ internal fun LazyListScope.conversationTimelineItems(
     unreadCount: Int,
     importantCount: Int,
     latestTimestamp: java.time.Instant?,
-    avatarColors: ConversationAvatarColors,
+    avatarColors: ConversationAccentColors,
     loading: Boolean,
     timelineItems: List<ConversationTimelineItem>,
     importantMessageIds: Set<Long>,
@@ -281,6 +288,7 @@ internal fun LazyListScope.conversationTimelineItems(
                     isImportant = item.message.id in importantMessageIds,
                     isSelected = item.message.id in selectedMessageIds,
                     isSelectionMode = selectedMessageIds.isNotEmpty(),
+                    accentColor = avatarColors.accentColor,
                     onLongPress = { onToggleMessageSelection(item.message.id) },
                     onCopyCode = onCopyCode,
                     onToggleSelection = { onToggleMessageSelection(item.message.id) },
