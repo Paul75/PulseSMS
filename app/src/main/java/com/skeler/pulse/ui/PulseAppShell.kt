@@ -89,7 +89,7 @@ fun PulseAppShell(
             activeAddress = requestedAddress
             activeConversationTitle = request.conversationTitle.ifBlank { displayNameFor(context, requestedAddress) }
             activeSubscriptionId = null
-            NotificationManagerCompat.from(context).cancel(requestedAddress.hashCode())
+            NotificationManagerCompat.from(context).cancel(requestedAddress.hashCode() and 0x7fffffff)
             onOpenConversation(requestedAddress, null)
             backStack = listOf(DESTINATION_INBOX, DESTINATION_CONVERSATION)
         } else {
@@ -171,7 +171,7 @@ fun PulseAppShell(
                                 activeConversationTitle = displayNameFor(context, address)
                                 activeSubscriptionId = null
                                 conversationDraftSeed = ""
-                                NotificationManagerCompat.from(context).cancel(address.hashCode())
+                                NotificationManagerCompat.from(context).cancel(address.hashCode() and 0x7fffffff)
                                 onOpenConversation(address, threadId)
                                 backStack = listOf(DESTINATION_INBOX, DESTINATION_CONVERSATION)
                             },

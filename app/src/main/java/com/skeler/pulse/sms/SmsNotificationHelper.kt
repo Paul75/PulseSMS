@@ -45,7 +45,7 @@ object SmsNotificationHelper {
         sender: String,
         body: String,
         messageId: Long = -1L,
-        notificationId: Int = sender.hashCode(),
+        notificationId: Int = sender.hashCode() and 0x7fffffff,
     ) {
         val launchIntent = MainActivity.createLaunchIntent(
             context = context,

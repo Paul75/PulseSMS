@@ -35,9 +35,7 @@ class SmsNotificationActionReceiver : BroadcastReceiver() {
             "${Telephony.Sms._ID} = ?",
             arrayOf(messageId.toString()),
         )
-        if (notificationId >= 0) {
-            NotificationManagerCompat.from(context).cancel(notificationId)
-        }
+        NotificationManagerCompat.from(context).cancel(notificationId)
     }
 
     private fun handleDelete(context: Context, messageId: Long, notificationId: Int) {
@@ -47,9 +45,7 @@ class SmsNotificationActionReceiver : BroadcastReceiver() {
             "${Telephony.Sms._ID} = ?",
             arrayOf(messageId.toString()),
         )
-        if (notificationId >= 0) {
-            NotificationManagerCompat.from(context).cancel(notificationId)
-        }
+        NotificationManagerCompat.from(context).cancel(notificationId)
     }
 
     private fun handleReply(context: Context, intent: Intent, notificationId: Int) {
@@ -93,9 +89,7 @@ class SmsNotificationActionReceiver : BroadcastReceiver() {
         }
         context.contentResolver.insert(Telephony.Sms.CONTENT_URI, values)
 
-        if (notificationId >= 0) {
-            NotificationManagerCompat.from(context).cancel(notificationId)
-        }
+        NotificationManagerCompat.from(context).cancel(notificationId)
     }
 
     companion object {
