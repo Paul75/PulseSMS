@@ -311,7 +311,7 @@ internal fun SmsThreadCard(
             )
             SerafinaContextMenuDivider()
             SerafinaContextMenuItem(
-                text = "Delete",
+                text = stringResource(R.string.thread_delete),
                 icon = Icons.Rounded.Delete,
                 contentColor = MaterialTheme.colorScheme.error,
                 onClick = {

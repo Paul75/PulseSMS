@@ -244,8 +244,8 @@ internal fun RealConversationScreen(
     if (showDeleteSelectedDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteSelectedDialog = false },
-            title = { Text("Delete messages") },
-            text = { Text("Delete ${selectedMessageIds.size} selected message${if (selectedMessageIds.size > 1) "s" else ""}?") },
+            title = { Text(stringResource(R.string.conversation_delete_title)) },
+            text = { Text(stringResource(R.string.conversation_delete_body, selectedMessageIds.size)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -254,12 +254,12 @@ internal fun RealConversationScreen(
                         showDeleteSelectedDialog = false
                     },
                 ) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.thread_delete), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteSelectedDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.action_cancel))
                 }
             },
         )

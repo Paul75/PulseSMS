@@ -150,7 +150,12 @@ internal fun SettingsScreen(
     }
     val themeOptions = remember {
         SerafinaThemeMode.entries.map { mode ->
-            SettingsChoiceOption(id = mode.name, label = mode.label)
+            val label = when (mode) {
+                SerafinaThemeMode.System -> context.getString(R.string.theme_mode_system)
+                SerafinaThemeMode.Light -> context.getString(R.string.theme_mode_light)
+                SerafinaThemeMode.Dark -> context.getString(R.string.theme_mode_dark)
+            }
+            SettingsChoiceOption(id = mode.name, label = label)
         }
     }
     val selectedColorSchemeId = if (themeState.dynamicColorEnabled) {
@@ -263,7 +268,11 @@ internal fun SettingsScreen(
                     SettingsChoiceRow(
                         icon = Icons.Outlined.Contrast,
                         title = stringResource(R.string.settings_theme),
-                        subtitle = themeState.themeMode.label,
+                        subtitle = when (themeState.themeMode) {
+                            SerafinaThemeMode.System -> context.getString(R.string.theme_mode_system)
+                            SerafinaThemeMode.Light -> context.getString(R.string.theme_mode_light)
+                            SerafinaThemeMode.Dark -> context.getString(R.string.theme_mode_dark)
+                        },
                     ) {
                         SettingsChoiceRail(
                             options = themeOptions,

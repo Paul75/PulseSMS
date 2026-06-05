@@ -91,5 +91,16 @@
     <string name="thread_delete_title">Delete conversation?</string>
     <string name="thread_delete_body">Delete the conversation with %1$s from this device? This can\'t be undone.</string>
     <string name="action_cancel">Cancel</string>
+    <string name="action_save">Save</string>
+    <string name="action_change">Change</string>
+    <string name="action_remove">Remove</string>
+    <string name="theme_mode_system">System default</string>
+    <string name="theme_mode_light">Light</string>
+    <string name="theme_mode_dark">Dark</string>
+    <string name="notification_action_mark_read">Mark read</string>
+    <string name="notification_action_reply">Reply</string>
+    <string name="notification_action_delete">Delete</string>
+    <string name="conversation_delete_title">Delete messages</string>
+    <string name="conversation_delete_body">Delete %d selected message(s)?</string>
     <string name="conversation_selected_count">%d selected</string>
 </resources>
