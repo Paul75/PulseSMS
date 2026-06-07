@@ -1,6 +1,7 @@
 package com.skeler.pulse.ui
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.net.Uri
 import android.provider.Telephony
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -22,6 +23,7 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
@@ -95,12 +97,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -129,6 +133,7 @@ import com.skeler.pulse.design.util.rememberReducedMotionEnabled
 import com.skeler.pulse.design.util.rememberSmoothFlingBehavior
 import com.skeler.pulse.design.util.scrollToItemSmoothly
 import com.skeler.pulse.sms.OtpCodeExtractor
+import coil.compose.AsyncImage
 import com.skeler.pulse.sms.SystemSms
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -252,18 +257,36 @@ internal fun ConversationMessageBubble(
                     tonalElevation = bubbleElevation,
                     shadowElevation = bubbleElevation,
                 ) {
-                    Text(
-                        text = messageLinkText,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                        style = MaterialTheme.typography.bodyLarge.copy(
-                            fontWeight = if (isUnread) FontWeight.Medium else FontWeight.Normal,
-                        ),
-                        color = when {
-                            hasFailedDelivery -> colors.onErrorContainer
-                            isOutbound -> colors.onPrimaryContainer
-                            else -> colors.onSurface
-                        },
-                    )
+                    Column {
+                        if (message.mmsPartUri != null) {
+                            AsyncImage(
+                                model = message.mmsPartUri,
+                                contentDescription = stringResource(R.string.mms_body_placeholder),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .aspectRatio(1f)
+                                    .clip(bubbleShape),
+                                contentScale = ContentScale.Crop,
+                            )
+                        }
+                        if (messageText.isNotBlank()) {
+                            Text(
+                                text = messageLinkText,
+                                modifier = Modifier.padding(
+                                    horizontal = 16.dp,
+                                    vertical = if (message.mmsPartUri != null) 8.dp else 12.dp,
+                                ),
+                                style = MaterialTheme.typography.bodyLarge.copy(
+                                    fontWeight = if (isUnread) FontWeight.Medium else FontWeight.Normal,
+                                ),
+                                color = when {
+                                    hasFailedDelivery -> colors.onErrorContainer
+                                    isOutbound -> colors.onPrimaryContainer
+                                    else -> colors.onSurface
+                                },
+                            )
+                        }
+                    }
                 }
                 copyableCode?.let { code ->
                     CopyCodeButton(

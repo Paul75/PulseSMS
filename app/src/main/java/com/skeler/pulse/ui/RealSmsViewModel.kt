@@ -315,9 +315,9 @@ class RealSmsViewModel(
         }
     }
 
-    fun deleteMessages(messageIds: List<Long>) {
+    fun deleteMessages(messages: List<SystemSms>) {
         viewModelScope.launch {
-            smsReader.deleteMessages(messageIds)
+            smsReader.deleteMessages(messages)
         }
     }
 

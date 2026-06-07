@@ -225,10 +225,10 @@ internal fun LazyListScope.conversationTimelineItems(
     loading: Boolean,
     timelineItems: List<ConversationTimelineItem>,
     importantMessageIds: Set<Long>,
-    selectedMessageIds: Set<Long>,
+    selectedMessages: Set<SystemSms>,
     reducedMotion: Boolean,
     onCopyCode: (String) -> Unit,
-    onToggleMessageSelection: (Long) -> Unit,
+    onToggleMessageSelection: (SystemSms) -> Unit,
 ) {
     item(
         key = "conversation_header",
@@ -279,11 +279,11 @@ internal fun LazyListScope.conversationTimelineItems(
                 is ConversationTimelineItem.Message -> ConversationMessageBubble(
                     message = item.message,
                     isImportant = item.message.id in importantMessageIds,
-                    isSelected = item.message.id in selectedMessageIds,
-                    isSelectionMode = selectedMessageIds.isNotEmpty(),
-                    onLongPress = { onToggleMessageSelection(item.message.id) },
+                    isSelected = item.message in selectedMessages,
+                    isSelectionMode = selectedMessages.isNotEmpty(),
+                    onLongPress = { onToggleMessageSelection(item.message) },
                     onCopyCode = onCopyCode,
-                    onToggleSelection = { onToggleMessageSelection(item.message.id) },
+                    onToggleSelection = { onToggleMessageSelection(item.message) },
                     modifier = motionAnimateItemModifier(reducedMotion)
                         .then(rememberEntranceModifier(item.key, reducedMotion)),
                 )
