@@ -68,7 +68,7 @@ internal fun RealConversationScreen(
     onClearSendState: () -> Unit,
     onDraftConsumed: () -> Unit,
     onDeleteMessage: (Long) -> Unit,
-    onDeleteMessages: (List<Long>) -> Unit,
+    onDeleteMessages: (List<SystemSms>) -> Unit,
     onBlockConversation: () -> Unit,
     onForwardMessage: (String) -> Unit,
     onCallAddress: () -> Unit,
@@ -152,7 +152,7 @@ internal fun RealConversationScreen(
     val importantCount = remember(messages, importantMessageIds) {
         messages.count { it.id in importantMessageIds }
     }
-    var selectedMessageIds by remember { mutableStateOf<Set<Long>>(emptySet()) }
+    var selectedMessages by remember { mutableStateOf<Set<SystemSms>>(emptySet()) }
     var showDeleteSelectedDialog by remember { mutableStateOf(false) }
     val clipboardMessageLabel = stringResource(R.string.conversation_clipboard_message_label)
     val clipboardCodeLabel = stringResource(R.string.conversation_clipboard_code_label)
@@ -178,8 +178,8 @@ internal fun RealConversationScreen(
     }
 
     BackHandler {
-        if (selectedMessageIds.isNotEmpty()) {
-            selectedMessageIds = emptySet()
+        if (selectedMessages.isNotEmpty()) {
+            selectedMessages = emptySet()
         } else if (shouldShowDiscardDraftDialog) {
             shouldShowDiscardDraftDialog = false
         } else {
@@ -246,12 +246,12 @@ internal fun RealConversationScreen(
         AlertDialog(
             onDismissRequest = { showDeleteSelectedDialog = false },
             title = { Text(stringResource(R.string.conversation_delete_title)) },
-            text = { Text(pluralStringResource(R.plurals.conversation_delete_body, selectedMessageIds.size, selectedMessageIds.size)) },
+            text = { Text(pluralStringResource(R.plurals.conversation_delete_body, selectedMessages.size, selectedMessages.size)) },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        onDeleteMessages(selectedMessageIds.toList())
-                        selectedMessageIds = emptySet()
+                        onDeleteMessages(selectedMessages.toList())
+                        selectedMessages = emptySet()
                         showDeleteSelectedDialog = false
                     },
                 ) {
@@ -271,13 +271,13 @@ internal fun RealConversationScreen(
             .background(conversationBackdropBrush),
         containerColor = Color.Transparent,
         topBar = {
-            if (selectedMessageIds.isNotEmpty()) {
+            if (selectedMessages.isNotEmpty()) {
                 ConversationSelectionTopBar(
-                    selectedCount = selectedMessageIds.size,
-                    onClose = { selectedMessageIds = emptySet() },
+                    selectedCount = selectedMessages.size,
+                    onClose = { selectedMessages = emptySet() },
                     onCopy = {
-                        val selectedMessages = messages.filter { it.id in selectedMessageIds }
-                        val text = selectedMessages.joinToString("\n\n") { it.body }
+                        val selectedTextMessages = messages.filter { it in selectedMessages }
+                        val text = selectedTextMessages.joinToString("\n\n") { it.body }
                         if (text.isNotEmpty()) {
                             clipboardManager?.setPrimaryClip(
                                 ClipData.newPlainText(clipboardMessageLabel, text)
@@ -357,16 +357,16 @@ internal fun RealConversationScreen(
                     loading = loading,
                     timelineItems = timelineItems,
                     importantMessageIds = importantMessageIds,
-                    selectedMessageIds = selectedMessageIds,
+                    selectedMessages = selectedMessages,
                     reducedMotion = reducedMotion,
                     onCopyCode = { code ->
                         clipboardManager?.setPrimaryClip(ClipData.newPlainText(clipboardCodeLabel, code))
                     },
-                    onToggleMessageSelection = { messageId ->
-                        selectedMessageIds = if (messageId in selectedMessageIds) {
-                            selectedMessageIds - messageId
+                    onToggleMessageSelection = { message ->
+                        selectedMessages = if (message in selectedMessages) {
+                            selectedMessages - message
                         } else {
-                            selectedMessageIds + messageId
+                            selectedMessages + message
                         }
                     },
                 )

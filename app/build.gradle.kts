@@ -137,6 +137,8 @@ dependencies {
     implementation(project(":feature:sync"))
     implementation(libs.androidx.biometric)
     implementation(libs.androidx.fragment)
+    implementation(libs.klinker.android.smsmms)
+    implementation(libs.coil.compose)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

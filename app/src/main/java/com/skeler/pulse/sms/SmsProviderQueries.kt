@@ -92,8 +92,8 @@ internal fun SystemSms.resolvedThreadId(): Long =
 internal class MutableThreadAccumulator(
     val threadId: Long,
     val address: String,
-    val snippet: String,
-    val date: Long,
+    var snippet: String,
+    var date: Long,
     var messageCount: Int = 0,
     var unreadCount: Int = 0,
 )
