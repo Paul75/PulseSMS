@@ -147,18 +147,15 @@ internal fun ConversationTopBar(
                             overflow = TextOverflow.Ellipsis,
                         )
                         val resources = context.resources
-                        val metaLabel = address.toConversationMetaLabel(
-                            categoryLabel = address.toConversationCategoryLabel(
-                                businessLabel = resources.getString(R.string.conversation_category_business),
-                                personalLabel = resources.getString(R.string.conversation_category_personal),
-                            ),
-                            messagesLabel = resources.getString(
+                        val metaParts = buildList {
+                            add(resources.getString(
                                 R.string.conversation_messages_label,
                                 if (totalMessageCount > 0) totalMessageCount else messages.size,
-                            ),
-                            unreadLabel = if (unreadCount > 0) resources.getString(R.string.conversation_unread_label, unreadCount) else null,
-                            keptLabel = if (importantCount > 0) resources.getString(R.string.conversation_kept_label, importantCount) else null,
-                        )
+                            ))
+                            if (unreadCount > 0) add(resources.getString(R.string.conversation_unread_label, unreadCount))
+                            if (importantCount > 0) add(resources.getString(R.string.conversation_kept_label, importantCount))
+                        }
+                        val metaLabel = metaParts.joinToString(" · ")
                         Text(
                             text = metaLabel,
                             style = MaterialTheme.typography.labelMedium,
