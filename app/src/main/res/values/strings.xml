@@ -43,6 +43,7 @@
     <string name="conversation_read_only_title">Read only</string>
     <string name="conversation_read_only_subtitle">Business sender &#8212; replies unavailable</string>
     <string name="conversation_loading_status">Opening thread</string>
+    <string name="conversation_load_older_messages">Load older messages</string>
     <string name="conversation_empty_title">No messages yet</string>
     <string name="conversation_empty_subtitle">Start a cleaner thread with %1$s using the composer below.</string>
     <string name="settings_title">Settings</string>

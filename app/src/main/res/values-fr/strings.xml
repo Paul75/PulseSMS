@@ -43,6 +43,7 @@
     <string name="conversation_read_only_title">Lecture seule</string>
     <string name="conversation_read_only_subtitle">Expéditeur professionnel — réponses indisponibles</string>
     <string name="conversation_loading_status">Ouverture de la conversation</string>
+    <string name="conversation_load_older_messages">Charger les messages plus anciens</string>
     <string name="conversation_empty_title">Aucun message</string>
     <string name="conversation_empty_subtitle">Commencez une conversation avec %1$s en utilisant le composeur ci-dessous.</string>
     <string name="settings_title">Paramètres</string>

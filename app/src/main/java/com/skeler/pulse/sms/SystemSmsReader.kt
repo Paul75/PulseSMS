@@ -74,15 +74,16 @@ class SystemSmsReader(
 
     /**
      * Observes messages for a specific address/thread as a reactive [Flow].
+     * @param maxCount Maximum number of recent messages to observe (default: no limit).
      */
-    fun observeMessages(address: String, threadId: Long? = null): Flow<List<SystemSms>> = callbackFlow {
+    fun observeMessages(address: String, threadId: Long? = null, maxCount: Int = Int.MAX_VALUE): Flow<List<SystemSms>> = callbackFlow {
         var readJob: Job? = null
         fun scheduleRead() {
             readJob?.cancel()
             readJob = launch(ioDispatcher) {
                 try {
-                    val smsMessages = readMessages(address = address, threadId = threadId)
-                    val mmsMessages = readMmsMessages(threadId = threadId, address = address)
+                    val smsMessages = readMessages(address = address, threadId = threadId, limit = maxCount)
+                    val mmsMessages = readMmsMessages(threadId = threadId, address = address, limit = maxCount)
                     trySend(mergeMessages(smsMessages, mmsMessages))
                 } catch (e: SecurityException) {
                     Log.w("SystemSmsReader", "READ_SMS permission not granted", e)
@@ -217,12 +218,13 @@ class SystemSmsReader(
     }
 
     /**
-     * Reads all messages for a specific address, sorted oldest first.
+     * Reads messages for a specific address, sorted oldest first.
+     * @param limit Maximum number of recent messages to return (default: no limit).
      */
-    fun readMessages(address: String, threadId: Long? = null): List<SystemSms> {
+    fun readMessages(address: String, threadId: Long? = null, limit: Int = Int.MAX_VALUE): List<SystemSms> {
         val normalized = address.normalizeAddressForDisplay()
         val criteria = messageReadCriteria(threadId = threadId, address = address)
-        val exactMessages = readMessages(criteria = criteria, normalizedAddress = normalized)
+        val exactMessages = readMessages(criteria = criteria, normalizedAddress = normalized, limit = limit)
         if (exactMessages.isNotEmpty() || threadId.isProviderThreadId()) return exactMessages
 
         val fullScanCriteria = SmsProviderCriteria(
@@ -230,18 +232,44 @@ class SystemSmsReader(
             selectionArgs = emptyArray(),
             shouldFilterByAddress = true,
         )
-        return readMessages(criteria = fullScanCriteria, normalizedAddress = normalized)
+        return readMessages(criteria = fullScanCriteria, normalizedAddress = normalized, limit = limit)
     }
 
-    private fun readMessages(criteria: SmsProviderCriteria, normalizedAddress: String): List<SystemSms> {
+    private fun readMessages(
+        criteria: SmsProviderCriteria,
+        normalizedAddress: String,
+        limit: Int = Int.MAX_VALUE,
+        beforeDate: Long? = null,
+    ): List<SystemSms> {
         val messages = mutableListOf<SystemSms>()
+        val hasLimit = limit < Int.MAX_VALUE
+
+        val clauses = mutableListOf<String>()
+        criteria.selection?.let { clauses.add(it) }
+        if (beforeDate != null) {
+            clauses.add("${Telephony.Sms.DATE} < ?")
+        }
+        val selection = clauses.joinToString(" AND ").ifBlank { null }
+
+        val args = mutableListOf<String>()
+        criteria.selectionArgs.forEach { args.add(it) }
+        if (beforeDate != null) {
+            args.add(beforeDate.toString())
+        }
+        val selectionArgs = args.toTypedArray()
+
+        val sortOrder = if (hasLimit || beforeDate != null) {
+            "${Telephony.Sms.DATE} DESC" + if (hasLimit) " LIMIT $limit" else ""
+        } else {
+            "${Telephony.Sms.DATE} ASC"
+        }
 
         val cursor = contentResolver.query(
             Telephony.Sms.CONTENT_URI,
             SMS_PROJECTION,
-            criteria.selection,
-            criteria.selectionArgs.ifEmpty { null },
-            "${Telephony.Sms.DATE} ASC",
+            selection,
+            selectionArgs.ifEmpty { null },
+            sortOrder,
         ) ?: return emptyList()
 
         cursor.use {
@@ -253,22 +281,69 @@ class SystemSmsReader(
                 }
             }
         }
+
+        if (hasLimit || beforeDate != null) {
+            messages.reverse()
+        }
+
         return messages
     }
 
-    private fun readMmsMessages(threadId: Long?, address: String): List<SystemSms> {
+    /**
+     * Reads older messages before a given date for pagination.
+     * @param beforeDate Cursor date in millis — only messages strictly older than this are returned.
+     * @param limit Maximum number of messages to return.
+     */
+    fun readOlderMessages(address: String, threadId: Long? = null, beforeDate: Long, limit: Int = DEFAULT_MESSAGE_LIMIT): List<SystemSms> {
+        val normalized = address.normalizeAddressForDisplay()
+        val criteria = messageReadCriteria(threadId = threadId, address = address)
+        val smsMessages = readMessages(criteria = criteria, normalizedAddress = normalized, beforeDate = beforeDate, limit = limit)
+        val mmsMessages = readMmsMessages(threadId = threadId, address = address, beforeDate = beforeDate, limit = limit)
+        val merged = mergeMessages(smsMessages, mmsMessages)
+        if (merged.isNotEmpty() || threadId.isProviderThreadId()) return merged
+
+        val fullScanCriteria = SmsProviderCriteria(
+            selection = null,
+            selectionArgs = emptyArray(),
+            shouldFilterByAddress = true,
+        )
+        val fullSms = readMessages(criteria = fullScanCriteria, normalizedAddress = normalized, beforeDate = beforeDate, limit = limit)
+        val fullMms = readMmsMessages(threadId = null, address = address, beforeDate = beforeDate, limit = limit)
+        return mergeMessages(fullSms, fullMms)
+    }
+
+    private fun readMmsMessages(
+        threadId: Long?,
+        address: String,
+        limit: Int = Int.MAX_VALUE,
+        beforeDate: Long? = null,
+    ): List<SystemSms> {
         val resolvedThreadId = threadId ?: runCatching {
             Telephony.Threads.getOrCreateThreadId(context, address).takeIf { it > 0L }
         }.getOrNull()
         if (resolvedThreadId == null || resolvedThreadId <= 0L) return emptyList()
 
+        val hasLimit = limit < Int.MAX_VALUE
+        val clauses = mutableListOf("thread_id = ?", "msg_box = ?")
+        if (beforeDate != null) clauses.add("date < ?")
+        val selection = clauses.joinToString(" AND ")
+
+        val selectionArgs = mutableListOf(resolvedThreadId.toString(), Telephony.Mms.MESSAGE_BOX_INBOX.toString())
+        if (beforeDate != null) selectionArgs.add((beforeDate / 1000).toString())
+
+        val sortOrder = if (hasLimit || beforeDate != null) {
+            "date DESC" + if (hasLimit) " LIMIT $limit" else ""
+        } else {
+            "date ASC"
+        }
+
         val cursor = try {
             contentResolver.query(
                 Telephony.Mms.CONTENT_URI,
                 arrayOf("_id", "date", "read", "msg_box", "thread_id"),
-                "thread_id = ? AND msg_box = ?",
-                arrayOf(resolvedThreadId.toString(), Telephony.Mms.MESSAGE_BOX_INBOX.toString()),
-                "date ASC",
+                selection,
+                selectionArgs.toTypedArray(),
+                sortOrder,
             )
         } catch (e: SecurityException) {
             Log.w(TAG, "MMS read requires READ_MMS permission", e)
@@ -330,6 +405,11 @@ class SystemSmsReader(
                     ),
                 )
             }
+
+            if (hasLimit || beforeDate != null) {
+                messages.reverse()
+            }
+
             messages
         }
     }
@@ -506,8 +586,61 @@ class SystemSmsReader(
     suspend fun sendSms(address: String, body: String, subscriptionId: Int? = null) =
         smsSender.sendSms(address = address, body = body, subscriptionId = subscriptionId)
 
+    fun countConversationMessages(address: String, threadId: Long?): Int {
+        val normalized = address.normalizeAddressForDisplay()
+        val criteria = messageReadCriteria(threadId, address)
+        var count = countSms(criteria, normalized)
+        if (count == 0 && !threadId.isProviderThreadId()) {
+            val fullScan = SmsProviderCriteria(null, emptyArray(), true)
+            count = countSms(fullScan, normalized)
+        }
+        count += countMms(threadId, address)
+        return count
+    }
+
+    private fun countSms(criteria: SmsProviderCriteria, normalizedAddress: String): Int {
+        val cursor = contentResolver.query(
+            Telephony.Sms.CONTENT_URI,
+            arrayOf(Telephony.Sms._ID, Telephony.Sms.ADDRESS),
+            criteria.selection,
+            criteria.selectionArgs.ifEmpty { null },
+            null,
+        ) ?: return 0
+        cursor.use {
+            val addressIdx = it.getColumnIndexOrThrow(Telephony.Sms.ADDRESS)
+            var count = 0
+            while (it.moveToNext()) {
+                val rawAddress = it.getString(addressIdx).orEmpty()
+                if (!criteria.shouldFilterByAddress || rawAddress.normalizeAddressForDisplay() == normalizedAddress) {
+                    count++
+                }
+            }
+            return count
+        }
+    }
+
+    private fun countMms(threadId: Long?, address: String): Int {
+        val resolvedThreadId = threadId ?: runCatching {
+            Telephony.Threads.getOrCreateThreadId(context, address).takeIf { it > 0L }
+        }.getOrNull()
+        if (resolvedThreadId == null || resolvedThreadId <= 0L) return 0
+        val cursor = try {
+            contentResolver.query(
+                Telephony.Mms.CONTENT_URI,
+                arrayOf("_id"),
+                "thread_id = ? AND msg_box = ?",
+                arrayOf(resolvedThreadId.toString(), Telephony.Mms.MESSAGE_BOX_INBOX.toString()),
+                null,
+            )
+        } catch (e: SecurityException) {
+            return 0
+        } ?: return 0
+        return cursor.use { it.count }
+    }
+
     companion object {
         private const val TAG = "SystemSmsReader"
+        internal const val DEFAULT_MESSAGE_LIMIT = 200
         private val SMS_PROJECTION = arrayOf(
             Telephony.Sms._ID,
             Telephony.Sms.ADDRESS,

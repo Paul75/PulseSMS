@@ -61,6 +61,9 @@ internal fun RealConversationScreen(
     importantMessageIds: Set<Long>,
     isReplyable: Boolean,
     sendState: SendState,
+    hasMoreMessages: Boolean = false,
+    loadingMore: Boolean = false,
+    totalMessageCount: Int = 0,
     onBack: () -> Unit,
     onSubscriptionIdChange: (Int?) -> Unit,
     onSend: (String) -> Unit,
@@ -72,6 +75,7 @@ internal fun RealConversationScreen(
     onBlockConversation: () -> Unit,
     onForwardMessage: (String) -> Unit,
     onCallAddress: () -> Unit,
+    onLoadMoreMessages: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -198,7 +202,7 @@ internal fun RealConversationScreen(
 
     LaunchedEffect(address, loading, timelineItems.size) {
         if (!loading && !hasPositionedInitialMessages && timelineItems.isNotEmpty()) {
-            listState.scrollToItem(conversationTimelineLazyListIndex(timelineItems.lastIndex))
+            listState.scrollToItem(conversationTimelineLazyListIndex(timelineItems.lastIndex, hasMoreMessages))
             previousMessageCount = messages.size
             hasPositionedInitialMessages = true
         }
@@ -212,7 +216,7 @@ internal fun RealConversationScreen(
 
         val listGrew = messages.size > previousMessageCount
         if (hasPositionedInitialMessages && listGrew && isNearEnd) {
-            listState.scrollToItemSmoothly(conversationTimelineLazyListIndex(timelineItems.lastIndex))
+            listState.scrollToItemSmoothly(conversationTimelineLazyListIndex(timelineItems.lastIndex, hasMoreMessages))
         }
         previousMessageCount = messages.size
     }
@@ -221,7 +225,7 @@ internal fun RealConversationScreen(
     val isKeyboardVisible = WindowInsets.isImeVisible
     LaunchedEffect(isKeyboardVisible, timelineItems.size) {
         if (isKeyboardVisible && timelineItems.isNotEmpty()) {
-            listState.scrollToItemSmoothly(conversationTimelineLazyListIndex(timelineItems.lastIndex))
+            listState.scrollToItemSmoothly(conversationTimelineLazyListIndex(timelineItems.lastIndex, hasMoreMessages))
         }
     }
 
@@ -303,6 +307,7 @@ internal fun RealConversationScreen(
                     messages = messages,
                     unreadCount = unreadCount,
                     importantCount = importantCount,
+                    totalMessageCount = totalMessageCount,
                     avatarColors = conversationAvatarColors,
                     onBack = ::requestBackNavigation,
                     onCallAddress = onCallAddress,
@@ -369,6 +374,9 @@ internal fun RealConversationScreen(
                     importantMessageIds = importantMessageIds,
                     selectedMessages = selectedMessages,
                     reducedMotion = reducedMotion,
+                    hasMoreMessages = hasMoreMessages,
+                    loadingMore = loadingMore,
+                    onLoadMoreMessages = onLoadMoreMessages,
                     onCopyCode = { code ->
                         clipboardManager?.setPrimaryClip(ClipData.newPlainText(clipboardCodeLabel, code))
                     },

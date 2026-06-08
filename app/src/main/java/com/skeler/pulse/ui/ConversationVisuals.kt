@@ -139,8 +139,7 @@ internal val ConversationCapsuleShape = RoundedCornerShape(16.dp)
 internal const val ConversationHeaderContentType = "conversation_header"
 internal const val ConversationLoadingContentType = "conversation_loading"
 internal const val ConversationEmptyContentType = "conversation_empty"
-internal const val ConversationTimelineStartLazyListIndex = 1
-
+internal const val ConversationLoadMoreContentType = "conversation_load_more"
 internal object ConversationVisualTokens {
     val timelineHorizontalPadding = 16.dp
     val timelineVerticalPadding = 12.dp
@@ -314,5 +313,5 @@ internal fun draftAfterSendState(currentDraft: String, sendState: SendState): St
 
 internal fun shouldConfirmDiscardDraft(draft: String): Boolean = draft.isNotBlank()
 
-internal fun conversationTimelineLazyListIndex(timelineIndex: Int): Int =
-    timelineIndex + ConversationTimelineStartLazyListIndex
+internal fun conversationTimelineLazyListIndex(timelineIndex: Int, hasLoadMoreItem: Boolean = false): Int =
+    timelineIndex + 1 + if (hasLoadMoreItem) 1 else 0

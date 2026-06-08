@@ -22,6 +22,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -55,6 +56,7 @@ import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.getValue
@@ -75,6 +77,7 @@ internal fun ConversationTopBar(
     messages: List<SystemSms>,
     unreadCount: Int,
     importantCount: Int,
+    totalMessageCount: Int,
     avatarColors: ConversationAvatarColors,
     onBack: () -> Unit,
     onCallAddress: () -> Unit,
@@ -149,7 +152,10 @@ internal fun ConversationTopBar(
                                 businessLabel = resources.getString(R.string.conversation_category_business),
                                 personalLabel = resources.getString(R.string.conversation_category_personal),
                             ),
-                            messagesLabel = resources.getString(R.string.conversation_messages_label, messages.size),
+                            messagesLabel = resources.getString(
+                                R.string.conversation_messages_label,
+                                if (totalMessageCount > 0) totalMessageCount else messages.size,
+                            ),
                             unreadLabel = if (unreadCount > 0) resources.getString(R.string.conversation_unread_label, unreadCount) else null,
                             keptLabel = if (importantCount > 0) resources.getString(R.string.conversation_kept_label, importantCount) else null,
                         )
@@ -157,7 +163,7 @@ internal fun ConversationTopBar(
                             text = metaLabel,
                             style = MaterialTheme.typography.labelMedium,
                             color = topBarContentColor.copy(alpha = 0.78f),
-                            maxLines = 1,
+                            maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
                         )
                     }
@@ -250,6 +256,9 @@ internal fun LazyListScope.conversationTimelineItems(
     reducedMotion: Boolean,
     onCopyCode: (String) -> Unit,
     onToggleMessageSelection: (SystemSms) -> Unit,
+    hasMoreMessages: Boolean = false,
+    loadingMore: Boolean = false,
+    onLoadMoreMessages: () -> Unit = {},
 ) {
     item(
         key = "conversation_header",
@@ -265,6 +274,19 @@ internal fun LazyListScope.conversationTimelineItems(
             avatarColors = avatarColors,
             modifier = rememberEntranceModifier("conversation_header_$address", reducedMotion),
         )
+    }
+
+    if (hasMoreMessages && !loading) {
+        item(
+            key = "conversation_load_more",
+            contentType = ConversationLoadMoreContentType,
+        ) {
+            ConversationLoadMoreItem(
+                loadingMore = loadingMore,
+                onLoadMore = onLoadMoreMessages,
+                modifier = rememberEntranceModifier("conversation_load_more_$address", reducedMotion),
+            )
+        }
     }
 
     when {
@@ -308,6 +330,26 @@ internal fun LazyListScope.conversationTimelineItems(
                     modifier = motionAnimateItemModifier(reducedMotion)
                         .then(rememberEntranceModifier(item.key, reducedMotion)),
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ConversationLoadMoreItem(
+    loadingMore: Boolean,
+    onLoadMore: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier.fillMaxWidth().padding(vertical = 16.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (loadingMore) {
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth(0.5f))
+        } else {
+            TextButton(onClick = onLoadMore) {
+                Text(stringResource(R.string.conversation_load_older_messages))
             }
         }
     }

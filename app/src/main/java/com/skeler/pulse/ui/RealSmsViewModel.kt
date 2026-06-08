@@ -11,11 +11,13 @@ import com.skeler.pulse.sms.SmsThread
 import com.skeler.pulse.sms.SystemSms
 import com.skeler.pulse.sms.SystemSmsReader
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
@@ -53,6 +55,9 @@ class RealSmsViewModel(
     private var activeConversationThreadId: Long? = null
     private var pendingReadTarget: ReadConversationTarget? = null
     private var lastSendRequest: PendingSendRequest? = null
+    private val loadedOlderMessages = mutableListOf<SystemSms>()
+    private var hasMoreMessages: Boolean = false
+    private var totalMessageCount: Int = 0
 
     private fun observeInbox() {
         inboxJob?.cancel()
@@ -165,16 +170,30 @@ class RealSmsViewModel(
                 if (thread.matchesReadTarget(pendingReadTarget!!)) thread.asRead() else thread
             },
         )
+        val batchSize = SystemSmsReader.DEFAULT_MESSAGE_LIMIT
+        loadedOlderMessages.clear()
+        hasMoreMessages = false
+        totalMessageCount = 0
+        viewModelScope.launch(Dispatchers.IO) {
+            val totalCount = smsReader.countConversationMessages(address = address, threadId = threadId)
+            totalMessageCount = totalCount
+        }
         conversationJob = viewModelScope.launch {
             combine(
-                smsReader.observeMessages(address = address, threadId = threadId),
+                smsReader.observeMessages(address = address, threadId = threadId, maxCount = batchSize),
                 importantMessagePreferences.importantMessageIds,
-            ) { messages, importantIds ->
-                val hasUnreadInbound = messages.hasUnreadInboundMessages()
+            ) { recent, importantIds ->
+                if (recent.size >= batchSize) {
+                    hasMoreMessages = true
+                }
+                val loadedIds = loadedOlderMessages.mapTo(hashSetOf()) { it.id }
+                val dedupedRecent = recent.filterNot { it.id in loadedIds }
+                val allMessages = loadedOlderMessages + dedupedRecent
+                val hasUnreadInbound = allMessages.hasUnreadInboundMessages()
                 val visibleMessages = if (pendingReadTarget == ReadConversationTarget(address, threadId)) {
-                    messages.map(SystemSms::asReadIfInbound)
+                    allMessages.map(SystemSms::asReadIfInbound)
                 } else {
-                    messages
+                    allMessages
                 }
                 val visibleImportantIds = visibleMessages.asSequence()
                     .map(SystemSms::id)
@@ -186,12 +205,48 @@ class RealSmsViewModel(
                     loading = false,
                     importantMessageIds = visibleImportantIds,
                     isReplyable = address.isReplyableConversationAddress(),
+                    hasMoreMessages = hasMoreMessages,
+                    totalMessageCount = totalMessageCount,
                 ) to hasUnreadInbound
             }.collectLatest { (conversationState, hasUnreadInbound) ->
                 _conversationState.value = conversationState
                 if (hasUnreadInbound) {
                     smsReader.setThreadUnreadState(threadId = threadId, address = address, unread = false)
                 }
+            }
+        }
+    }
+
+    fun loadMoreMessages() {
+        if (!hasMoreMessages || _conversationState.value.loadingMore) return
+        val currentState = _conversationState.value
+        val beforeDate = loadedOlderMessages.firstOrNull()?.date
+            ?: currentState.messages.firstOrNull()?.date
+            ?: return
+        val address = currentState.address
+        val threadId = activeConversationThreadId
+
+        _conversationState.value = _conversationState.value.copy(loadingMore = true)
+        viewModelScope.launch {
+            val batchSize = SystemSmsReader.DEFAULT_MESSAGE_LIMIT
+            val olderMessages = smsReader.readOlderMessages(
+                address = address,
+                threadId = threadId,
+                beforeDate = beforeDate,
+                limit = batchSize,
+            )
+            hasMoreMessages = olderMessages.size >= batchSize
+            val loadedIds = loadedOlderMessages.mapTo(hashSetOf()) { it.id }
+            val deduped = olderMessages.filterNot { it.id in loadedIds }
+            loadedOlderMessages.addAll(0, deduped)
+            _conversationState.update { state ->
+                val recentIds = olderMessages.mapTo(hashSetOf()) { it.id }
+                val dedupedRecent = state.messages.filterNot { it.id in recentIds }
+                state.copy(
+                    messages = loadedOlderMessages + dedupedRecent,
+                    hasMoreMessages = hasMoreMessages,
+                    loadingMore = false,
+                )
             }
         }
     }
@@ -203,6 +258,9 @@ class RealSmsViewModel(
         activeConversationAddress = null
         activeConversationThreadId = null
         pendingReadTarget = null
+        loadedOlderMessages.clear()
+        hasMoreMessages = false
+        totalMessageCount = 0
         _conversationState.value = RealConversationState(loading = false)
         _sendState.value = SendState.Idle
     }

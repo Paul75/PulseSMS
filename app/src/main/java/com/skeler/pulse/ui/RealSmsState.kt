@@ -64,6 +64,9 @@ data class RealConversationState(
     val loading: Boolean = true,
     val importantMessageIds: Set<Long> = emptySet(),
     val isReplyable: Boolean = true,
+    val hasMoreMessages: Boolean = false,
+    val loadingMore: Boolean = false,
+    val totalMessageCount: Int = 0,
 )
 
 sealed interface SendState {

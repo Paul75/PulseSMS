@@ -237,6 +237,9 @@ fun PulseAppShell(
                             activeAddress = activeAddress,
                             conversationState = conversationState,
                         ),
+                        hasMoreMessages = conversationState.hasMoreMessages,
+                        loadingMore = conversationState.loadingMore,
+                        totalMessageCount = conversationState.totalMessageCount,
                         sendState = sendState,
                         onBack = {
                             navigateBack()
@@ -263,6 +266,7 @@ fun PulseAppShell(
                         onCallAddress = {
                             openDialer(context, activeAddress)
                         },
+                        onLoadMoreMessages = smsViewModel::loadMoreMessages,
                     )
                 }
 
