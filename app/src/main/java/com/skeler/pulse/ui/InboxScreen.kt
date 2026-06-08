@@ -9,6 +9,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -47,6 +48,7 @@ import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.HourglassTop
 import androidx.compose.material.icons.rounded.Key
 import androidx.compose.material.icons.rounded.MarkunreadMailbox
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.AlertDialog
@@ -63,15 +65,16 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -95,7 +98,10 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.skeler.pulse.InboxAccessState
@@ -141,8 +147,10 @@ internal fun RealInboxScreen(
 ) {
     var selectedFilter by rememberSaveable { mutableIntStateOf(0) }
     var searchQuery by rememberSaveable { mutableStateOf("") }
+    var isSearching by rememberSaveable { mutableStateOf(false) }
     var contextMenuThreadId by rememberSaveable { mutableStateOf<Long?>(null) }
     val context = LocalContext.current
+    val searchFocusRequester = remember { FocusRequester() }
     val reducedMotion = rememberReducedMotionEnabled()
     val listFlingBehavior = rememberSmoothFlingBehavior(enabled = !reducedMotion)
     val colors = MaterialTheme.colorScheme
@@ -198,17 +206,94 @@ internal fun RealInboxScreen(
         }
     }
 
+    if (isSearching) {
+        BackHandler {
+            isSearching = false
+            searchQuery = ""
+        }
+    }
+
+    LaunchedEffect(isSearching) {
+        if (isSearching) {
+            searchFocusRequester.requestFocus()
+        }
+    }
+
     Scaffold(
         modifier = Modifier.background(brush = inboxBackdropBrush),
         containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.inbox_title), style = MaterialTheme.typography.headlineMedium) },
+                title = {
+                    if (isSearching) {
+                        BasicTextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .focusRequester(searchFocusRequester),
+                            singleLine = true,
+                            textStyle = MaterialTheme.typography.bodyLarge.copy(
+                                color = MaterialTheme.colorScheme.onSurface,
+                            ),
+                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                            keyboardOptions = KeyboardOptions(
+                                imeAction = ImeAction.Search,
+                            ),
+                            keyboardActions = KeyboardActions(
+                                onSearch = { /* keep filtering as user types */ },
+                            ),
+                            decorationBox = { innerTextField ->
+                                Box(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    contentAlignment = Alignment.CenterStart,
+                                ) {
+                                    if (searchQuery.isEmpty()) {
+                                        Text(
+                                            text = stringResource(R.string.inbox_search_placeholder),
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                    innerTextField()
+                                }
+                            },
+                        )
+                    } else {
+                        Text(
+                            text = stringResource(R.string.inbox_title),
+                            style = MaterialTheme.typography.headlineMedium,
+                        )
+                    }
+                },
+                navigationIcon = {
+                    IconButton(
+                        onClick = {
+                            if (isSearching) {
+                                isSearching = false
+                                searchQuery = ""
+                            } else {
+                                isSearching = true
+                            }
+                        },
+                    ) {
+                        Icon(
+                            imageVector = if (isSearching) Icons.AutoMirrored.Rounded.ArrowBack else Icons.Rounded.Search,
+                            contentDescription = if (isSearching) stringResource(R.string.inbox_clear_search) else stringResource(R.string.inbox_search_placeholder),
+                            tint = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
                     scrolledContainerColor = MaterialTheme.colorScheme.surface,
                 ),
                 actions = {
+                    if (isSearching && searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { searchQuery = "" }) {
+                            Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.inbox_clear_search), tint = MaterialTheme.colorScheme.onSurface)
+                        }
+                    }
                     IconButton(onClick = onOpenArchivedChats) {
                         Icon(Icons.Rounded.Archive, contentDescription = stringResource(R.string.settings_archived_chats), tint = MaterialTheme.colorScheme.onSurface)
                     }
@@ -270,71 +355,38 @@ internal fun RealInboxScreen(
             ),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            item(key = "inbox_search") {
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
+            item(key = "filter_chips") {
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(min = 52.dp)
-                        .padding(bottom = 6.dp),
-                    singleLine = true,
-                    textStyle = MaterialTheme.typography.bodyLarge,
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Rounded.Search,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp),
-                        )
-                    },
-                    trailingIcon = {
-                        if (searchQuery.isNotEmpty()) {
-                            IconButton(onClick = { searchQuery = "" }, modifier = Modifier.size(34.dp)) {
-                                Icon(
-                                    imageVector = Icons.Rounded.Close,
-                                    contentDescription = stringResource(R.string.inbox_clear_search),
-                                    modifier = Modifier.size(18.dp),
-                                )
-                            }
-                        }
-                    },
-                    placeholder = {
-                        Text(
-                            text = stringResource(R.string.inbox_search_placeholder),
-                            style = MaterialTheme.typography.bodyLarge,
-                        )
-                    },
-                    shape = RoundedCornerShape(18.dp),
-                )
-            }
-            item(key = "filter_chips") {
-                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    SingleChoiceSegmentedButtonRow(
-                        modifier = Modifier.padding(bottom = 8.dp),
-                    ) {
+                        .padding(bottom = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(0.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
                     InboxFilter.entries.forEachIndexed { index, filter ->
-                        SegmentedButton(
-                            selected = selectedFilter == index,
-                            onClick = { selectedFilter = index },
-                            icon = {},
-                            shape = SegmentedButtonDefaults.itemShape(
-                                index = index,
-                                count = InboxFilter.entries.size,
-                            ),
-                            colors = SegmentedButtonDefaults.colors(
-                                activeContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                                activeContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                            ),
-                        ) {
+                        if (index > 0) {
                             Text(
-                                stringResource(filter.labelResId),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
+                                text = "·",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f),
+                                modifier = Modifier.padding(horizontal = 2.dp),
                             )
                         }
+                        Text(
+                            text = stringResource(filter.labelResId),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = if (selectedFilter == index) FontWeight.SemiBold else FontWeight.Normal,
+                            color = if (selectedFilter == index) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                            modifier = Modifier
+                                .clickable { selectedFilter = index }
+                                .padding(horizontal = 8.dp, vertical = 6.dp),
+                        )
                     }
                 }
-            }
             }
             when {
                 state.loading && state.showLoadingCard -> {
