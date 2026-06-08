@@ -232,7 +232,6 @@ internal fun RealInboxScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .focusRequester(searchFocusRequester),
-                            singleLine = true,
                             textStyle = MaterialTheme.typography.bodyLarge.copy(
                                 color = MaterialTheme.colorScheme.onSurface,
                             ),
@@ -253,6 +252,7 @@ internal fun RealInboxScreen(
                                             text = stringResource(R.string.inbox_search_placeholder),
                                             style = MaterialTheme.typography.bodyLarge,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 2,
                                         )
                                     }
                                     innerTextField()
