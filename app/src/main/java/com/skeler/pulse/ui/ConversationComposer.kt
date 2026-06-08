@@ -263,7 +263,7 @@ internal fun ConversationComposer(
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(ConversationComposerTokens.contentSpacing),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalAlignment = Alignment.Bottom,
         ) {
             IconButton(
                 onClick = {
