@@ -55,8 +55,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
@@ -304,7 +304,7 @@ internal fun RealInboxScreen(
             )
         },
         floatingActionButton = {
-            ExtendedFloatingActionButton(
+            FloatingActionButton(
                 modifier = Modifier.semantics {
                     role = Role.Button
                     contentDescription = context.getString(R.string.inbox_new_chat)
@@ -312,26 +312,17 @@ internal fun RealInboxScreen(
                 onClick = onOpenNewChat,
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                shape = RoundedCornerShape(24.dp),
+                shape = RoundedCornerShape(16.dp),
                 elevation = FloatingActionButtonDefaults.elevation(
                     defaultElevation = NewChatFabDefaultElevation,
                     pressedElevation = NewChatFabPressedElevation,
-                    focusedElevation = NewChatFabDefaultElevation,
-                    hoveredElevation = NewChatFabPressedElevation,
                 ),
-                icon = {
-                    Icon(
-                        imageVector = Icons.Rounded.AddComment,
-                        contentDescription = null,
-                    )
-                },
-                text = {
-                    Text(
-                        text = stringResource(R.string.inbox_new_chat),
-                        style = MaterialTheme.typography.labelLarge,
-                    )
-                },
-            )
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.AddComment,
+                    contentDescription = null,
+                )
+            }
         },
     ) { innerPadding ->
         Box(
