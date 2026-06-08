@@ -135,6 +135,7 @@ import java.time.Instant
 
 
 internal val ConversationPillShape = RoundedCornerShape(999.dp)
+internal val ConversationCapsuleShape = RoundedCornerShape(16.dp)
 internal const val ConversationHeaderContentType = "conversation_header"
 internal const val ConversationLoadingContentType = "conversation_loading"
 internal const val ConversationEmptyContentType = "conversation_empty"

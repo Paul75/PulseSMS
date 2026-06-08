@@ -218,7 +218,7 @@ internal fun ConversationComposer(
         animationSpec = tween(durationMillis = if (reducedMotion) 0 else 200),
         label = "send_content",
     )
-    val capsuleShape = ConversationPillShape
+    val capsuleShape = ConversationCapsuleShape
     val context = LocalContext.current
     val hasCounter = characterCounter?.let { c ->
         c.segmentCount > 1 || c.remainingCharacters < 20
