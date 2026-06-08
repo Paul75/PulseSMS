@@ -281,6 +281,18 @@ class SystemSmsReader(
             val readIdx = c.getColumnIndexOrThrow("read")
             val msgBoxIdx = c.getColumnIndexOrThrow("msg_box")
 
+            // Resolve sender address once — all MMS in this thread share the same sender
+            val resolvedAddress = if (c.moveToFirst()) {
+                val firstMmsId = c.getLong(idIdx)
+                try {
+                    MmsAddressResolver.resolveAddress(context, firstMmsId).ifEmpty { address }
+                } catch (e: SecurityException) {
+                    address
+                }.also { c.moveToPosition(-1) }
+            } else {
+                return@use emptyList()
+            }
+
             val messages = mutableListOf<SystemSms>()
             while (c.moveToNext()) {
                 val mmsId = c.getLong(idIdx)
@@ -288,24 +300,15 @@ class SystemSmsReader(
                 val readInt = c.getInt(readIdx)
                 val msgBox = c.getInt(msgBoxIdx)
 
-                val fromAddress = try {
-                    MmsAddressResolver.resolveAddress(context, mmsId).ifEmpty { address }
+                val partsResult = try {
+                    MmsPartResolver.resolveParts(context, mmsId)
                 } catch (e: SecurityException) {
-                    address
+                    MmsPartResolver.MmsPartsResult(null, null)
                 }
-                val body = try {
-                    MmsPartResolver.resolveTextBody(context, mmsId).orEmpty()
-                } catch (e: SecurityException) {
-                    ""
-                }
-                val partUri = try {
-                    val uri = MmsPartResolver.resolveFirstAttachmentUri(context, mmsId)
+
+                val body = partsResult.textBody.orEmpty()
+                val partUri = partsResult.attachmentUri.also { uri ->
                     if (uri != null) Log.i(TAG, "MMS part URI: $uri for mmsId=$mmsId")
-                    else Log.w(TAG, "No attachment part found for mmsId=$mmsId")
-                    uri
-                } catch (e: SecurityException) {
-                    Log.w(TAG, "SecurityException reading MMS parts for mmsId=$mmsId", e)
-                    null
                 }
 
                 val smsType = when (msgBox) {
@@ -317,7 +320,7 @@ class SystemSmsReader(
                     SystemSms(
                         id = mmsId,
                         isMms = true,
-                        address = fromAddress,
+                        address = resolvedAddress,
                         body = body.ifEmpty { context.getString(R.string.mms_body_placeholder) },
                         date = dateSecs * 1000L,
                         type = smsType,
@@ -333,7 +336,18 @@ class SystemSmsReader(
 
     private fun mergeMessages(sms: List<SystemSms>, mms: List<SystemSms>): List<SystemSms> {
         if (mms.isEmpty()) return sms
-        return (sms + mms).sortedBy { it.date }
+        if (sms.isEmpty()) return mms
+        // Both lists are pre-sorted by date ASC — linear merge O(N+M)
+        val result = ArrayList<SystemSms>(sms.size + mms.size)
+        var i = 0
+        var j = 0
+        while (i < sms.size && j < mms.size) {
+            if (sms[i].date <= mms[j].date) result.add(sms[i++])
+            else result.add(mms[j++])
+        }
+        while (i < sms.size) result.add(sms[i++])
+        while (j < mms.size) result.add(mms[j++])
+        return result
     }
 
     fun markThreadAsRead(threadId: Long?, address: String) {

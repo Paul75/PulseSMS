@@ -12,6 +12,42 @@ internal object MmsPartResolver {
     private const val TEXT_HTML = "text/html"
     private const val TAG = "MmsPartResolver"
 
+    data class MmsPartsResult(
+        val textBody: String?,
+        val attachmentUri: Uri?,
+    )
+
+    fun resolveParts(context: Context, mmsId: Long): MmsPartsResult {
+        val parts = queryParts(context, mmsId) ?: return MmsPartsResult(null, null)
+
+        var textBody: String? = null
+        var attachmentUri: Uri? = null
+
+        for (entry in parts) {
+            when (entry.mimeType) {
+                TEXT_PLAIN, TEXT_HTML -> if (textBody == null) {
+                    textBody = readPartContent(context, entry.id)
+                }
+                "application/smil" -> { /* skip SMIL manifest */ }
+                else -> if (attachmentUri == null) {
+                    val cacheFile = File(context.cacheDir, "mms_parts/${entry.id}")
+                    attachmentUri = if (cacheFile.exists()) {
+                        FileProvider.getUriForFile(
+                            context,
+                            "${context.packageName}.mmsfileprovider",
+                            cacheFile,
+                        )
+                    } else {
+                        Uri.parse("content://mms/part/${entry.id}")
+                    }
+                    Log.i(TAG, "Attachment URI: $attachmentUri (${entry.mimeType})")
+                }
+            }
+        }
+
+        return MmsPartsResult(textBody = textBody, attachmentUri = attachmentUri)
+    }
+
     fun resolveTextBody(context: Context, mmsId: Long): String? {
         val parts = queryParts(context, mmsId) ?: return null
         return parts.firstOrNull { entry ->
