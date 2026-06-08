@@ -147,7 +147,15 @@ internal fun RealConversationScreen(
         }
     }
 
-    val timelineItems = remember(messages) { messages.toConversationTimeline() }
+    val timelineItems = remember(messages) {
+        messages.toConversationTimeline(
+            unreadMessagesFormatter = { count ->
+                context.resources.getQuantityString(R.plurals.conversation_unread_messages, count, count)
+            },
+            todayLabel = context.getString(R.string.conversation_today),
+            yesterdayLabel = context.getString(R.string.conversation_yesterday),
+        )
+    }
     val unreadCount = remember(messages) { messages.count { it.isInbound && !it.read } }
     val importantCount = remember(messages, importantMessageIds) {
         messages.count { it.id in importantMessageIds }

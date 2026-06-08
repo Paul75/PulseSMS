@@ -178,4 +178,20 @@
     <string name="blocked_back_to_settings">Back to settings</string>
     <string name="blocked_count">%d blocked</string>
     <string name="blocked_unblock">Unblock</string>
+    <string name="conversation_today">Today</string>
+    <string name="conversation_yesterday">Yesterday</string>
+    <plurals name="conversation_unread_messages">
+        <item quantity="one">1 unread message</item>
+        <item quantity="other">%d unread messages</item>
+    </plurals>
+    <string name="conversation_messages_label">%d messages</string>
+    <string name="conversation_unread_label">%d unread</string>
+    <string name="conversation_kept_label">%d kept</string>
+    <string name="conversation_category_business">Business SMS</string>
+    <string name="conversation_category_personal">Personal SMS</string>
+    <string name="biometric_tap_to_auth">Tap to authenticate</string>
+    <string name="biometric_no_hardware">Strong biometric hardware is not available on this device.</string>
+    <string name="biometric_hw_unavailable">Strong biometric hardware is temporarily unavailable.</string>
+    <string name="biometric_none_enrolled">Enroll a strong biometric before using biometric login.</string>
+    <string name="biometric_security_update">Install the required biometric sensor security update.</string>
 </resources>

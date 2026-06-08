@@ -112,7 +112,7 @@ internal fun SecuritySettingsScreen(
         }
         val availability = checkBiometricAvailability(context)
         if (availability != BiometricAvailability.Available) {
-            biometricToggleError = availability.lockScreenMessage()
+            biometricToggleError = availability.lockScreenMessage(context.resources)
             return
         }
         val activity = context.findFragmentActivity()

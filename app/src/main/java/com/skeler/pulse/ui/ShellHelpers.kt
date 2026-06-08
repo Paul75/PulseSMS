@@ -2,7 +2,9 @@ package com.skeler.pulse.ui
 
 import android.content.Context
 import android.content.ContextWrapper
+import android.content.res.Resources
 import androidx.fragment.app.FragmentActivity
+import com.skeler.pulse.R
 import com.skeler.pulse.security.auth.BiometricAvailability
 import com.skeler.pulse.sms.SystemSms
 import java.time.Instant
@@ -16,12 +18,12 @@ internal fun Instant.toInboxTimestamp(): String = when {
     else -> INBOX_DATE_FORMATTER.format(atZone(ZoneId.systemDefault()))
 }
 
-internal fun BiometricAvailability.lockScreenMessage(): String = when (this) {
-    BiometricAvailability.Available -> "Tap to authenticate"
-    BiometricAvailability.NoHardware -> "Strong biometric hardware is not available on this device."
-    BiometricAvailability.HardwareUnavailable -> "Strong biometric hardware is temporarily unavailable."
-    BiometricAvailability.NoneEnrolled -> "Enroll a strong biometric before using biometric login."
-    BiometricAvailability.SecurityUpdateRequired -> "Install the required biometric sensor security update."
+internal fun BiometricAvailability.lockScreenMessage(resources: Resources): String = when (this) {
+    BiometricAvailability.Available -> resources.getString(R.string.biometric_tap_to_auth)
+    BiometricAvailability.NoHardware -> resources.getString(R.string.biometric_no_hardware)
+    BiometricAvailability.HardwareUnavailable -> resources.getString(R.string.biometric_hw_unavailable)
+    BiometricAvailability.NoneEnrolled -> resources.getString(R.string.biometric_none_enrolled)
+    BiometricAvailability.SecurityUpdateRequired -> resources.getString(R.string.biometric_security_update)
 }
 
 internal tailrec fun Context.findFragmentActivity(): FragmentActivity? = when (this) {
@@ -56,7 +58,11 @@ internal sealed interface ConversationTimelineItem {
     }
 }
 
-internal fun List<SystemSms>.toConversationTimeline(): List<ConversationTimelineItem> {
+internal fun List<SystemSms>.toConversationTimeline(
+    unreadMessagesFormatter: (Int) -> String,
+    todayLabel: String,
+    yesterdayLabel: String,
+): List<ConversationTimelineItem> {
     if (isEmpty()) return emptyList()
 
     val items = ArrayList<ConversationTimelineItem>(size + 4)
@@ -69,15 +75,14 @@ internal fun List<SystemSms>.toConversationTimeline(): List<ConversationTimeline
         if (localDate != lastDate) {
             items += ConversationTimelineItem.DayDivider(
                 key = "conversation_day_${localDate}",
-                label = localDate.toConversationDayLabel(),
+                label = localDate.toConversationDayLabel(todayLabel, yesterdayLabel),
             )
             lastDate = localDate
         }
         if (message.id == firstUnreadMessageId) {
             items += ConversationTimelineItem.UnreadDivider(
                 key = "conversation_unread_${message.id}",
-                label = if (unreadMessages == 1) "1 unread message"
-                else "$unreadMessages unread messages",
+                label = unreadMessagesFormatter(unreadMessages),
             )
         }
         items += ConversationTimelineItem.Message(message)
@@ -86,9 +91,13 @@ internal fun List<SystemSms>.toConversationTimeline(): List<ConversationTimeline
     return items
 }
 
-internal fun LocalDate.toConversationDayLabel(today: LocalDate = LocalDate.now()): String = when (this) {
-    today -> "Today"
-    today.minusDays(1) -> "Yesterday"
+internal fun LocalDate.toConversationDayLabel(
+    todayLabel: String,
+    yesterdayLabel: String,
+    today: LocalDate = LocalDate.now(),
+): String = when (this) {
+    today -> todayLabel
+    today.minusDays(1) -> yesterdayLabel
     else -> CONVERSATION_DAY_FORMATTER.format(this)
 }
 
@@ -108,19 +117,23 @@ internal fun String.isDirectAddressCandidate(): Boolean {
     return any(Char::isDigit) || contains('@') || any { it == '+' }
 }
 
-internal fun String.toConversationCategoryLabel(): String =
-    if (any(Char::isLetter)) "Business SMS" else "Personal SMS"
+internal fun String.toConversationCategoryLabel(
+    businessLabel: String,
+    personalLabel: String,
+): String =
+    if (any(Char::isLetter)) businessLabel else personalLabel
 
 internal fun String.toConversationMetaLabel(
-    totalMessages: Int,
-    unreadCount: Int,
-    importantCount: Int,
+    categoryLabel: String,
+    messagesLabel: String,
+    unreadLabel: String?,
+    keptLabel: String?,
 ): String {
     val parts = buildList {
-        add(toConversationCategoryLabel())
-        add("$totalMessages messages")
-        if (unreadCount > 0) add("$unreadCount unread")
-        if (importantCount > 0) add("$importantCount kept")
+        add(categoryLabel)
+        add(messagesLabel)
+        if (unreadLabel != null) add(unreadLabel)
+        if (keptLabel != null) add(keptLabel)
     }
     return parts.joinToString(" · ")
 }

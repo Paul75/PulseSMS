@@ -200,12 +200,18 @@ internal fun ConversationOverviewCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Text(
-                    text = address.toConversationMetaLabel(
-                        totalMessages = messageCount.coerceAtLeast(0),
-                        unreadCount = unreadCount,
-                        importantCount = importantCount,
+                val resources = context.resources
+                val metaLabel = address.toConversationMetaLabel(
+                    categoryLabel = address.toConversationCategoryLabel(
+                        businessLabel = resources.getString(R.string.conversation_category_business),
+                        personalLabel = resources.getString(R.string.conversation_category_personal),
                     ),
+                    messagesLabel = resources.getString(R.string.conversation_messages_label, messageCount.coerceAtLeast(0)),
+                    unreadLabel = if (unreadCount > 0) resources.getString(R.string.conversation_unread_label, unreadCount) else null,
+                    keptLabel = if (importantCount > 0) resources.getString(R.string.conversation_kept_label, importantCount) else null,
+                )
+                Text(
+                    text = metaLabel,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

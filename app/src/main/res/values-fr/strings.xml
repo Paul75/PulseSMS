@@ -178,4 +178,20 @@
     <string name="blocked_back_to_settings">Retour aux paramètres</string>
     <string name="blocked_count">%d bloqué(s)</string>
     <string name="blocked_unblock">Débloquer</string>
+    <string name="conversation_today">Aujourd\'hui</string>
+    <string name="conversation_yesterday">Hier</string>
+    <plurals name="conversation_unread_messages">
+        <item quantity="one">1 message non lu</item>
+        <item quantity="other">%d messages non lus</item>
+    </plurals>
+    <string name="conversation_messages_label">%d messages</string>
+    <string name="conversation_unread_label">%d non lu(s)</string>
+    <string name="conversation_kept_label">%d conservé(s)</string>
+    <string name="conversation_category_business">SMS pro</string>
+    <string name="conversation_category_personal">SMS personnel</string>
+    <string name="biometric_tap_to_auth">Toucher pour s\'authentifier</string>
+    <string name="biometric_no_hardware">Ce matériel ne dispose pas de biométrie forte.</string>
+    <string name="biometric_hw_unavailable">La biométrie forte est temporairement indisponible.</string>
+    <string name="biometric_none_enrolled">Enregistrez une biométrie forte avant d\'utiliser la connexion biométrique.</string>
+    <string name="biometric_security_update">Installez la mise à jour de sécurité du capteur biométrique.</string>
 </resources>

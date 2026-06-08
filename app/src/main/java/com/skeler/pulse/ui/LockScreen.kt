@@ -70,7 +70,7 @@ internal fun LockScreen(
         val activity = context.findFragmentActivity() ?: return
         authError = null
         if (biometricAvailability != BiometricAvailability.Available) {
-            authError = biometricAvailability.lockScreenMessage()
+            authError = biometricAvailability.lockScreenMessage(context.resources)
             return
         }
         showBiometricPrompt(
@@ -109,7 +109,7 @@ internal fun LockScreen(
     LaunchedEffect(biometricEnabled, biometricAvailability) {
         if (!biometricEnabled || hasAutoPrompted) return@LaunchedEffect
         if (biometricAvailability != BiometricAvailability.Available) {
-            authError = biometricAvailability.lockScreenMessage()
+            authError = biometricAvailability.lockScreenMessage(context.resources)
             return@LaunchedEffect
         }
         hasAutoPrompted = true
