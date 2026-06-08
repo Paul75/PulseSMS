@@ -161,4 +161,14 @@
     <string name="security_biometric_prompt_title">Activer la connexion biométrique</string>
     <string name="security_biometric_prompt_subtitle">Authentifiez-vous pour protéger Pulse par biométrie</string>
     <string name="security_biometric_prompt_error">L\'écran biométrique n\'a pas pu être lancé.</string>
+    <string name="lock_screen_title">Pulse est verrouillé</string>
+    <string name="lock_screen_hint_both">Utilisez l\'empreinte ou le mot de passe</string>
+    <string name="lock_screen_hint_biometric">Utilisez l\'empreinte pour déverrouiller</string>
+    <string name="lock_screen_hint_password">Saisissez votre mot de passe</string>
+    <string name="lock_screen_hint_none">Aucune méthode de déverrouillage configurée</string>
+    <string name="lock_screen_password_incorrect">Mot de passe incorrect. Réessayez.</string>
+    <string name="lock_screen_unlock_button">Déverrouiller</string>
+    <string name="lock_screen_use_fingerprint_button">Utiliser l\'empreinte</string>
+    <string name="lock_biometric_prompt_title">Déverrouiller Pulse</string>
+    <string name="lock_biometric_prompt_subtitle">Authentifiez-vous pour accéder à vos messages</string>
 </resources>

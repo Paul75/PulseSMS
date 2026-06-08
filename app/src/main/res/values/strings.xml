@@ -161,4 +161,14 @@
     <string name="security_biometric_prompt_title">Enable biometric login</string>
     <string name="security_biometric_prompt_subtitle">Authenticate to protect Pulse with biometrics</string>
     <string name="security_biometric_prompt_error">Biometric prompt could not be started.</string>
+    <string name="lock_screen_title">Pulse is locked</string>
+    <string name="lock_screen_hint_both">Use fingerprint or password</string>
+    <string name="lock_screen_hint_biometric">Use fingerprint to unlock</string>
+    <string name="lock_screen_hint_password">Enter your password</string>
+    <string name="lock_screen_hint_none">No unlock method is configured</string>
+    <string name="lock_screen_password_incorrect">Incorrect password. Try again.</string>
+    <string name="lock_screen_unlock_button">Unlock</string>
+    <string name="lock_screen_use_fingerprint_button">Use fingerprint</string>
+    <string name="lock_biometric_prompt_title">Unlock Pulse</string>
+    <string name="lock_biometric_prompt_subtitle">Authenticate to access your messages</string>
 </resources>
