@@ -147,4 +147,18 @@
         <item quantity="one">1 selected</item>
         <item quantity="other">%d selected</item>
     </plurals>
+    <string name="security_header_title">Security &amp; Biometric</string>
+    <string name="security_fingerprint_title">Fingerprint</string>
+    <string name="security_fingerprint_active">Biometric login active</string>
+    <string name="security_fingerprint_inactive">Tap to enable biometric login</string>
+    <string name="security_fingerprint_auth_failed">Authentication failed. Try again.</string>
+    <string name="security_password_title">Password</string>
+    <string name="security_password_set">Alphanumeric password set</string>
+    <string name="security_password_not_set">Set an alphanumeric password</string>
+    <string name="security_password_enter">Enter password</string>
+    <string name="security_password_hide">Hide password</string>
+    <string name="security_password_show">Show password</string>
+    <string name="security_biometric_prompt_title">Enable biometric login</string>
+    <string name="security_biometric_prompt_subtitle">Authenticate to protect Pulse with biometrics</string>
+    <string name="security_biometric_prompt_error">Biometric prompt could not be started.</string>
 </resources>

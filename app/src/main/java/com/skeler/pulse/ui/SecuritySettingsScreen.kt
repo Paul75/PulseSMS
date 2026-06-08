@@ -117,14 +117,14 @@ internal fun SecuritySettingsScreen(
         }
         val activity = context.findFragmentActivity()
         if (activity == null) {
-            biometricToggleError = "Biometric prompt could not be started."
+            biometricToggleError = context.getString(R.string.security_biometric_prompt_error)
             return
         }
         biometricToggleError = null
         showBiometricPrompt(
             activity = activity,
-            title = "Enable biometric login",
-            subtitle = "Authenticate to protect Pulse with biometrics",
+            title = context.getString(R.string.security_biometric_prompt_title),
+            subtitle = context.getString(R.string.security_biometric_prompt_subtitle),
         ) { result ->
             when (result) {
                 is BiometricAuthResult.Success -> {
@@ -133,7 +133,7 @@ internal fun SecuritySettingsScreen(
                 }
                 is BiometricAuthResult.Cancelled -> Unit
                 is BiometricAuthResult.Failed -> {
-                    biometricToggleError = "Authentication failed. Try again."
+                    biometricToggleError = context.getString(R.string.security_fingerprint_auth_failed)
                 }
                 is BiometricAuthResult.Error -> {
                     biometricToggleError = result.message
@@ -160,7 +160,7 @@ internal fun SecuritySettingsScreen(
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             item(key = "security_header") {
-                SettingsSectionHeader("Security & Biometric")
+                SettingsSectionHeader(stringResource(R.string.security_header_title))
             }
             item(key = "security_card") {
                 SettingsGroupCard {
@@ -206,9 +206,9 @@ internal fun SecurityFingerprintRow(
             Icon(Icons.Rounded.Fingerprint, contentDescription = null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Column(modifier = Modifier.weight(1f)) {
-            Text("Fingerprint", style = MaterialTheme.typography.bodyLarge)
+            Text(stringResource(R.string.security_fingerprint_title), style = MaterialTheme.typography.bodyLarge)
             Text(
-                text = error ?: if (enabled) "Biometric login active" else "Tap to enable biometric login",
+                text = error ?: if (enabled) stringResource(R.string.security_fingerprint_active) else stringResource(R.string.security_fingerprint_inactive),
                 style = MaterialTheme.typography.bodySmall,
                 color = if (error == null) {
                     MaterialTheme.colorScheme.onSurfaceVariant
@@ -251,9 +251,9 @@ internal fun SecurityPasswordSection(
                 Icon(Icons.Rounded.Lock, contentDescription = null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Column(modifier = Modifier.weight(1f)) {
-                Text("Password", style = MaterialTheme.typography.bodyLarge)
+                Text(stringResource(R.string.security_password_title), style = MaterialTheme.typography.bodyLarge)
                 Text(
-                    text = if (passwordSet) "Alphanumeric password set" else "Set an alphanumeric password",
+                    text = if (passwordSet) stringResource(R.string.security_password_set) else stringResource(R.string.security_password_not_set),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -265,7 +265,7 @@ internal fun SecurityPasswordSection(
                 value = passwordInput,
                 onValueChange = { newValue -> passwordInput = newValue.filter { it.isLetterOrDigit() } },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Enter password") },
+                label = { Text(stringResource(R.string.security_password_enter)) },
                 singleLine = true,
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
@@ -276,7 +276,7 @@ internal fun SecurityPasswordSection(
                     IconButton(onClick = { passwordVisible = !passwordVisible }) {
                         Icon(
                             imageVector = if (passwordVisible) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
-                            contentDescription = if (passwordVisible) "Hide password" else "Show password",
+                            contentDescription = if (passwordVisible) stringResource(R.string.security_password_hide) else stringResource(R.string.security_password_show),
                         )
                     }
                 },

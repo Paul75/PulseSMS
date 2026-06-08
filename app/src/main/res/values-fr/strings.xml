@@ -147,4 +147,18 @@
         <item quantity="one">1 sélectionné</item>
         <item quantity="other">%d sélectionnés</item>
     </plurals>
+    <string name="security_header_title">Sécurité &amp; Biométrie</string>
+    <string name="security_fingerprint_title">Empreinte</string>
+    <string name="security_fingerprint_active">Connexion biométrique activée</string>
+    <string name="security_fingerprint_inactive">Activer la connexion biométrique</string>
+    <string name="security_fingerprint_auth_failed">Authentification échouée. Réessayez.</string>
+    <string name="security_password_title">Mot de passe</string>
+    <string name="security_password_set">Mot de passe alphanumérique défini</string>
+    <string name="security_password_not_set">Définir un mot de passe alphanumérique</string>
+    <string name="security_password_enter">Saisir le mot de passe</string>
+    <string name="security_password_hide">Masquer le mot de passe</string>
+    <string name="security_password_show">Afficher le mot de passe</string>
+    <string name="security_biometric_prompt_title">Activer la connexion biométrique</string>
+    <string name="security_biometric_prompt_subtitle">Authentifiez-vous pour protéger Pulse par biométrie</string>
+    <string name="security_biometric_prompt_error">L\'écran biométrique n\'a pas pu être lancé.</string>
 </resources>
