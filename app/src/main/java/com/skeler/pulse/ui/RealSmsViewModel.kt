@@ -47,6 +47,7 @@ class RealSmsViewModel(
     val sendState: StateFlow<SendState> = _sendState.asStateFlow()
 
     private var inboxJob: Job? = null
+    private var sendJob: Job? = null
     private var conversationJob: Job? = null
     private var activeConversationAddress: String? = null
     private var activeConversationThreadId: Long? = null
@@ -196,12 +197,14 @@ class RealSmsViewModel(
     }
 
     fun closeConversation() {
+        sendJob = null
         conversationJob?.cancel()
         conversationJob = null
         activeConversationAddress = null
         activeConversationThreadId = null
         pendingReadTarget = null
         _conversationState.value = RealConversationState(loading = false)
+        _sendState.value = SendState.Idle
     }
 
     fun toggleImportantMessage(messageId: Long) {
@@ -223,7 +226,8 @@ class RealSmsViewModel(
         lastSendRequest = request
         _sendState.value = SendState.Sending(trimmedBody)
 
-        viewModelScope.launch {
+        sendJob?.cancel()
+        sendJob = viewModelScope.launch {
             try {
                 smsReader.sendSms(address, trimmedBody, subscriptionId)
                 _sendState.value = SendState.Sent(trimmedBody)

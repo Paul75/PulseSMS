@@ -98,18 +98,19 @@ internal class SystemSmsSender(
             val receiver = object : BroadcastReceiver() {
                 override fun onReceive(context: Context, intent: Intent) {
                     if (intent.action != action) return
-                    if (resultCode != Activity.RESULT_OK) {
-                        failures.add(resultCode)
+                    if (resultCode == Activity.RESULT_OK) {
+                        if (completed.compareAndSet(false, true)) {
+                            context.unregisterReceiver(this)
+                            continuation.resume(Unit)
+                        }
+                        return
                     }
+                    failures.add(resultCode)
                     if (remainingParts.decrementAndGet() == 0 && completed.compareAndSet(false, true)) {
                         context.unregisterReceiver(this)
-                        if (failures.isEmpty()) {
-                            continuation.resume(Unit)
-                        } else {
-                            continuation.resumeWithException(
-                                SmsSendException("SMS send failed with result ${failures.first()}")
-                            )
-                        }
+                        continuation.resumeWithException(
+                            SmsSendException("SMS send failed with result ${failures.first()}")
+                        )
                     }
                 }
             }
