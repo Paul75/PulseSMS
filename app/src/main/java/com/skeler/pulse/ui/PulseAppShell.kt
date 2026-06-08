@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -61,7 +62,10 @@ fun PulseAppShell(
     var pendingForwardDraft by rememberSaveable { mutableStateOf<String?>(null) }
     var newChatQuery by rememberSaveable { mutableStateOf("") }
     var lastHandledNewChatRequestKey by rememberSaveable { mutableIntStateOf(0) }
-    var consumedLaunchRequest by rememberSaveable { mutableStateOf(false) }
+    var consumedLaunchRequest by remember { mutableStateOf(false) }
+    LaunchedEffect(launchRequest) {
+        if (launchRequest != null) consumedLaunchRequest = false
+    }
     var isAuthenticated by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
     val shellThemeState by themeViewModel.state.collectAsState()
