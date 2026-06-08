@@ -178,6 +178,8 @@ internal object ConversationComposerTokens {
     val simBadgeHorizontalPadding = 10.dp
     val simBadgeContentSpacing = 5.dp
     val simIconSize = 14.dp
+    val attachmentButtonSize = 36.dp
+    val attachmentIconSize = 20.dp
     val sendButtonSize = 52.dp
     val sendIconSize = 23.dp
     val sendIconHorizontalOffset = (-1).dp

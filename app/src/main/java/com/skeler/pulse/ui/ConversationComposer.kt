@@ -2,6 +2,7 @@ package com.skeler.pulse.ui
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.provider.Telephony
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -53,6 +54,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material.icons.outlined.Sms
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.ArrowBackIosNew
 import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.rounded.CheckCircle
@@ -93,10 +95,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
@@ -221,23 +219,21 @@ internal fun ConversationComposer(
         label = "send_content",
     )
     val capsuleShape = ConversationPillShape
+    val context = LocalContext.current
+    val hasCounter = characterCounter?.let { c ->
+        c.segmentCount > 1 || c.remainingCharacters < 20
+    } == true
+    val counterText = characterCounter?.let { c ->
+        if (c.segmentCount > 1) {
+            "${c.remainingCharacters} / ${c.segmentCount}"
+        } else {
+            "${c.remainingCharacters}"
+        }
+    }
 
-    Box(
+    Column(
         modifier = modifier
             .fillMaxWidth()
-            .graphicsLayer { translationY = containerLift }
-            .drawBehind {
-                drawCircle(
-                    brush = Brush.radialGradient(
-                        colors = listOf(
-                            colors.primary.copy(alpha = if (isFocused) 0.18f else 0.10f),
-                            Color.Transparent,
-                        ),
-                        center = Offset(size.width * 0.86f, size.height * 0.50f),
-                        radius = size.height * 1.35f,
-                    ),
-                )
-            }
             .padding(
                 start = ConversationComposerTokens.outerHorizontalPadding,
                 top = ConversationComposerTokens.outerTopPadding,
@@ -245,11 +241,45 @@ internal fun ConversationComposer(
                 bottom = ConversationComposerTokens.outerBottomPadding,
             ),
     ) {
+        if (hasCounter) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        start = ConversationComposerTokens.attachmentButtonSize +
+                            ConversationComposerTokens.contentSpacing,
+                        bottom = 2.dp,
+                    ),
+                horizontalArrangement = Arrangement.End,
+            ) {
+                Text(
+                    text = counterText!!,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = colors.onSurfaceVariant.copy(alpha = 0.6f),
+                    maxLines = 1,
+                )
+            }
+        }
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(ConversationComposerTokens.contentSpacing),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            IconButton(
+                onClick = {
+                    Toast.makeText(context, R.string.conversation_attachment_unavailable, Toast.LENGTH_SHORT).show()
+                },
+                enabled = !isSending,
+                modifier = Modifier
+                    .size(ConversationComposerTokens.attachmentButtonSize),
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Add,
+                    contentDescription = stringResource(R.string.conversation_attach_content_description),
+                    modifier = Modifier.size(ConversationComposerTokens.attachmentIconSize),
+                    tint = colors.onSurfaceVariant.copy(alpha = ConversationComposerTokens.inactiveAlpha),
+                )
+            }
             Row(
                 modifier = Modifier
                     .weight(1f)
@@ -268,12 +298,14 @@ internal fun ConversationComposer(
                 horizontalArrangement = Arrangement.spacedBy(ConversationComposerTokens.contentSpacing),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                ConversationSimSelector(
-                    simOptions = simOptions,
-                    selectedSim = selectedSim,
-                    enabled = !isSending,
-                    onSimOptionClick = onSimOptionClick,
-                )
+                if (simOptions.size > 1) {
+                    ConversationSimSelector(
+                        simOptions = simOptions,
+                        selectedSim = selectedSim,
+                        enabled = !isSending,
+                        onSimOptionClick = onSimOptionClick,
+                    )
+                }
                 CompositionLocalProvider(LocalTextSelectionColors provides textSelectionColors) {
                     BasicTextField(
                         value = draft,
@@ -325,14 +357,6 @@ internal fun ConversationComposer(
                                 innerTextField()
                             }
                         },
-                    )
-                }
-                characterCounter?.let { counter ->
-                    Text(
-                        text = "${counter.remainingCharacters} / ${counter.segmentCount}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = colors.onSurfaceVariant,
-                        maxLines = 1,
                     )
                 }
             }
