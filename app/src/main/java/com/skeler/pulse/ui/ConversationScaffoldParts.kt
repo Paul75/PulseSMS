@@ -59,7 +59,9 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.Dispatchers
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
@@ -426,11 +428,35 @@ internal fun MessageInfoSheet(
 
 @Composable
 private fun MessageInfoContent(message: SystemSms) {
-    val resources = androidx.compose.ui.platform.LocalContext.current.resources
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val resources = context.resources
     val dateFormatter = DateTimeFormatter.ofPattern("EEE, MMM d, yyyy HH:mm")
 
     fun formatTimestamp(epochMillis: Long): String =
         dateFormatter.format(java.time.Instant.ofEpochMilli(epochMillis).atZone(ZoneId.systemDefault()))
+
+    val deliveryDate by produceState<Long?>(initialValue = null, message.id, message.threadId) {
+        if (message.isOutbound && message.threadId > 0L) {
+            value = try {
+                val cursor = context.contentResolver.query(
+                    Telephony.Sms.CONTENT_URI,
+                    arrayOf(Telephony.Sms.DATE),
+                    "${Telephony.Sms.THREAD_ID} = ? AND ${Telephony.Sms.ADDRESS} = ? AND ${Telephony.Sms.DATE} > ?",
+                    arrayOf(
+                        message.threadId.toString(),
+                        message.address,
+                        message.date.toString(),
+                    ),
+                    "${Telephony.Sms.DATE} ASC",
+                )
+                cursor?.use {
+                    if (it.moveToFirst()) it.getLong(it.getColumnIndexOrThrow(Telephony.Sms.DATE)) else null
+                }
+            } catch (e: Exception) {
+                null
+            }
+        }
+    }
 
     val typeLabel = when (message.type) {
         Telephony.Sms.MESSAGE_TYPE_INBOX -> R.string.message_type_inbox
@@ -489,6 +515,10 @@ private fun MessageInfoContent(message: SystemSms) {
                 else -> R.string.message_status_unknown
             }
             InfoRow(label = stringResource(R.string.message_info_status), value = stringResource(statusLabel))
+            if (message.status == Telephony.Sms.STATUS_COMPLETE && deliveryDate != null) {
+                Spacer(modifier = Modifier.height(10.dp))
+                InfoRow(label = stringResource(R.string.message_info_received), value = formatTimestamp(deliveryDate!!))
+            }
         }
         if (message.isInbound) {
             Spacer(modifier = Modifier.height(10.dp))
