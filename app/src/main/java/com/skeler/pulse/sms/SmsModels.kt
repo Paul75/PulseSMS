@@ -25,6 +25,8 @@ data class SystemSms(
     val threadId: Long,
     val status: Int = Telephony.Sms.STATUS_NONE,
     val mmsPartUri: Uri? = null,
+    val priority: Int? = null,
+    val dateSent: Long? = null,
 ) {
     val isInbound: Boolean get() = type == Telephony.Sms.MESSAGE_TYPE_INBOX
     val isOutbound: Boolean

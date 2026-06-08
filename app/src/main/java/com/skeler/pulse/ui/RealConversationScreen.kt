@@ -162,6 +162,7 @@ internal fun RealConversationScreen(
     }
     var selectedMessages by remember { mutableStateOf<Set<SystemSms>>(emptySet()) }
     var showDeleteSelectedDialog by remember { mutableStateOf(false) }
+    var infoSheetMessage by remember { mutableStateOf<SystemSms?>(null) }
     val clipboardMessageLabel = stringResource(R.string.conversation_clipboard_message_label)
     val clipboardCodeLabel = stringResource(R.string.conversation_clipboard_code_label)
     val clipboardManager = remember(context) {
@@ -293,6 +294,7 @@ internal fun RealConversationScreen(
                         }
                     },
                     onDelete = { showDeleteSelectedDialog = true },
+                    onInfo = { infoSheetMessage = selectedMessages.firstOrNull() },
                 )
             } else {
                 ConversationTopBar(
@@ -382,4 +384,9 @@ internal fun RealConversationScreen(
         }
 
     }
+
+    MessageInfoSheet(
+        message = infoSheetMessage,
+        onDismiss = { infoSheetMessage = null },
+    )
 }

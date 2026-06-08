@@ -503,6 +503,8 @@ class SystemSmsReader(
             Telephony.Sms.READ,
             Telephony.Sms.THREAD_ID,
             Telephony.Sms.STATUS,
+            "priority",
+            Telephony.Sms.DATE_SENT,
         )
     }
 }

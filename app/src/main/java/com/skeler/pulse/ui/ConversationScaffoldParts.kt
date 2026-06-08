@@ -45,10 +45,23 @@ import com.skeler.pulse.design.component.StatusPill
 import com.skeler.pulse.design.util.motionAnimateItemModifier
 import com.skeler.pulse.design.util.rememberEntranceModifier
 import com.skeler.pulse.sms.SystemSms
+import android.provider.Telephony
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 private val ConversationCallButtonSize = 36.dp
 
@@ -345,6 +358,7 @@ internal fun ConversationSelectionTopBar(
     onClose: () -> Unit,
     onCopy: () -> Unit,
     onDelete: () -> Unit,
+    onInfo: (() -> Unit)? = null,
 ) {
     CenterAlignedTopAppBar(
         title = { Text(pluralStringResource(R.plurals.conversation_selected_count, selectedCount, selectedCount)) },
@@ -357,6 +371,14 @@ internal fun ConversationSelectionTopBar(
             }
         },
         actions = {
+            if (selectedCount == 1 && onInfo != null) {
+                IconButton(onClick = onInfo) {
+                    Icon(
+                        imageVector = Icons.Rounded.Info,
+                        contentDescription = stringResource(R.string.message_info_show),
+                    )
+                }
+            }
             if (selectedCount >= 1) {
                 IconButton(onClick = onCopy) {
                     Icon(
@@ -377,4 +399,111 @@ internal fun ConversationSelectionTopBar(
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
         ),
     )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun MessageInfoSheet(
+    message: SystemSms?,
+    onDismiss: () -> Unit,
+) {
+    if (message == null) return
+    var showSheet by remember { mutableStateOf(true) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    if (showSheet) {
+        ModalBottomSheet(
+            onDismissRequest = {
+                showSheet = false
+                onDismiss()
+            },
+            sheetState = sheetState,
+        ) {
+            MessageInfoContent(message = message)
+        }
+    }
+}
+
+@Composable
+private fun MessageInfoContent(message: SystemSms) {
+    val resources = androidx.compose.ui.platform.LocalContext.current.resources
+    val dateFormatter = DateTimeFormatter.ofPattern("EEE, MMM d, yyyy HH:mm")
+
+    fun formatTimestamp(epochMillis: Long): String =
+        dateFormatter.format(java.time.Instant.ofEpochMilli(epochMillis).atZone(ZoneId.systemDefault()))
+
+    val typeLabel = when (message.type) {
+        Telephony.Sms.MESSAGE_TYPE_INBOX -> R.string.message_type_inbox
+        Telephony.Sms.MESSAGE_TYPE_SENT -> R.string.message_type_sent
+        Telephony.Sms.MESSAGE_TYPE_DRAFT -> R.string.message_type_draft
+        Telephony.Sms.MESSAGE_TYPE_OUTBOX -> R.string.message_type_outbox
+        Telephony.Sms.MESSAGE_TYPE_FAILED -> R.string.message_type_failed
+        else -> null
+    }
+    val protocolLabel = if (message.isMms) R.string.message_type_mms else R.string.message_type_sms
+    val priorityLabel = when (message.priority) {
+        2 -> R.string.message_priority_high
+        1 -> R.string.message_priority_normal
+        else -> null
+    }
+
+    Column(modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 32.dp)) {
+        Text(
+            text = stringResource(R.string.message_info_title),
+            style = MaterialTheme.typography.titleMedium,
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        HorizontalDivider()
+        Spacer(modifier = Modifier.height(12.dp))
+
+        InfoRow(label = stringResource(R.string.message_info_type), value = buildString {
+            append(stringResource(protocolLabel))
+            typeLabel?.let { append(" · ${stringResource(it)}") }
+        })
+
+        priorityLabel?.let {
+            Spacer(modifier = Modifier.height(10.dp))
+            InfoRow(label = stringResource(R.string.message_info_priority), value = stringResource(it))
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+        if (message.isInbound) {
+            InfoRow(label = stringResource(R.string.message_info_from), value = message.address)
+        } else {
+            InfoRow(label = stringResource(R.string.message_info_to), value = message.address)
+        }
+
+        if (message.dateSent != null && message.dateSent > 0L) {
+            Spacer(modifier = Modifier.height(10.dp))
+            InfoRow(label = stringResource(R.string.message_info_sent), value = formatTimestamp(message.dateSent))
+        } else if (message.isOutbound) {
+            Spacer(modifier = Modifier.height(10.dp))
+            InfoRow(label = stringResource(R.string.message_info_sent), value = formatTimestamp(message.date))
+        }
+        if (message.isInbound) {
+            Spacer(modifier = Modifier.height(10.dp))
+            InfoRow(label = stringResource(R.string.message_info_received), value = formatTimestamp(message.date))
+        }
+    }
+}
+
+@Composable
+private fun InfoRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(modifier = Modifier.width(16.dp))
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+    }
 }

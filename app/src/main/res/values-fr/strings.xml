@@ -194,4 +194,21 @@
     <string name="biometric_hw_unavailable">La biométrie forte est temporairement indisponible.</string>
     <string name="biometric_none_enrolled">Enregistrez une biométrie forte avant d\'utiliser la connexion biométrique.</string>
     <string name="biometric_security_update">Installez la mise à jour de sécurité du capteur biométrique.</string>
+    <string name="message_info_title">Infos message</string>
+    <string name="message_info_type">Type</string>
+    <string name="message_info_priority">Priorité</string>
+    <string name="message_info_from">De</string>
+    <string name="message_info_to">À</string>
+    <string name="message_info_sent">Envoyé le</string>
+    <string name="message_info_received">Reçu le</string>
+    <string name="message_type_inbox">Boîte de réception</string>
+    <string name="message_type_sent">Envoyé</string>
+    <string name="message_type_draft">Brouillon</string>
+    <string name="message_type_outbox">Boîte d\'envoi</string>
+    <string name="message_type_failed">Échec</string>
+    <string name="message_type_sms">SMS</string>
+    <string name="message_type_mms">MMS</string>
+    <string name="message_priority_high">Haute</string>
+    <string name="message_priority_normal">Normale</string>
+    <string name="message_info_show">Infos</string>
 </resources>

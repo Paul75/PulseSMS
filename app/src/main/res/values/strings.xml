@@ -194,4 +194,21 @@
     <string name="biometric_hw_unavailable">Strong biometric hardware is temporarily unavailable.</string>
     <string name="biometric_none_enrolled">Enroll a strong biometric before using biometric login.</string>
     <string name="biometric_security_update">Install the required biometric sensor security update.</string>
+    <string name="message_info_title">Message info</string>
+    <string name="message_info_type">Type</string>
+    <string name="message_info_priority">Priority</string>
+    <string name="message_info_from">From</string>
+    <string name="message_info_to">To</string>
+    <string name="message_info_sent">Sent</string>
+    <string name="message_info_received">Received</string>
+    <string name="message_type_inbox">Inbox</string>
+    <string name="message_type_sent">Sent</string>
+    <string name="message_type_draft">Draft</string>
+    <string name="message_type_outbox">Outbox</string>
+    <string name="message_type_failed">Failed</string>
+    <string name="message_type_sms">SMS</string>
+    <string name="message_type_mms">MMS</string>
+    <string name="message_priority_high">High</string>
+    <string name="message_priority_normal">Normal</string>
+    <string name="message_info_show">Info</string>
 </resources>
