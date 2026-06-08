@@ -63,7 +63,7 @@
     <string name="settings_language_english">Anglais</string>
     <string name="action_close">Fermer</string>
     <string name="inbox_title">Messages</string>
-    <string name="inbox_search_placeholder">Rechercher des conversations</string>
+    <string name="inbox_search_placeholder">Rechercher</string>
     <string name="inbox_clear_search">Effacer la recherche</string>
     <string name="inbox_new_chat">Nouveau message</string>
     <string name="inbox_filter_all">Tous</string>
