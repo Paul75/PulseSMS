@@ -96,8 +96,9 @@ import androidx.compose.ui.zIndex
 import com.skeler.pulse.InboxAccessState
 import com.skeler.pulse.R
 import com.skeler.pulse.contact.contactLookupIntent
-import com.skeler.pulse.contact.displayNameFor
 import com.skeler.pulse.contact.contactPhotoUriFor
+import com.skeler.pulse.contact.displayNameFor
+import com.skeler.pulse.contact.formatAddressForDisplay
 import com.skeler.pulse.design.component.SerafinaAvatar
 import com.skeler.pulse.design.component.SerafinaProgressIndicator
 import com.skeler.pulse.design.util.elasticOverscroll
@@ -128,6 +129,8 @@ internal fun SmsThreadCard(
     val context = LocalContext.current
     val reducedMotion = rememberReducedMotionEnabled()
     val displayName = remember(thread.address) { displayNameFor(context, thread.address) }
+    val formattedAddress = remember(thread.address) { formatAddressForDisplay(thread.address) }
+    val showAddress = displayName != formattedAddress
     val initials = displayName.toAvatarInitials()
     val photoUri = remember(thread.address) { contactPhotoUriFor(context, thread.address) }
     val hasUnread = thread.unreadCount > 0
@@ -230,6 +233,15 @@ internal fun SmsThreadCard(
                             text = displayName,
                             style = if (hasUnread) MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                             else MaterialTheme.typography.titleMedium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    if (showAddress) {
+                        Text(
+                            text = formattedAddress,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )

@@ -203,6 +203,15 @@ private fun lookupContactDisplayName(
 
 private fun String.isLikelyBusinessSender(): Boolean = any(Char::isLetter)
 
+internal fun formatPhoneNumberForDisplay(address: String): String = formatPhoneNumber(address)
+
+internal fun formatAddressForDisplay(address: String): String {
+    address.removeBlockedKeyPrefix("phone:")?.let { phone ->
+        return formatPhoneNumber(phone)
+    }
+    return address
+}
+
 private fun formatPhoneNumber(address: String): String {
     val trimmed = address.trim()
     return PhoneNumberUtils.formatNumber(trimmed, Locale.getDefault().country)
