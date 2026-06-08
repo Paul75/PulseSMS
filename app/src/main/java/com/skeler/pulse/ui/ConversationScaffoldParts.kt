@@ -480,6 +480,16 @@ private fun MessageInfoContent(message: SystemSms) {
             Spacer(modifier = Modifier.height(10.dp))
             InfoRow(label = stringResource(R.string.message_info_sent), value = formatTimestamp(message.date))
         }
+        if (message.isOutbound && message.status != Telephony.Sms.STATUS_NONE && message.type == Telephony.Sms.MESSAGE_TYPE_SENT) {
+            Spacer(modifier = Modifier.height(10.dp))
+            val statusLabel = when (message.status) {
+                Telephony.Sms.STATUS_COMPLETE -> R.string.message_status_delivered
+                Telephony.Sms.STATUS_PENDING -> R.string.message_status_pending
+                Telephony.Sms.STATUS_FAILED -> R.string.message_status_failed
+                else -> R.string.message_status_unknown
+            }
+            InfoRow(label = stringResource(R.string.message_info_status), value = stringResource(statusLabel))
+        }
         if (message.isInbound) {
             Spacer(modifier = Modifier.height(10.dp))
             InfoRow(label = stringResource(R.string.message_info_received), value = formatTimestamp(message.date))

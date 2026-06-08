@@ -211,4 +211,9 @@
     <string name="message_priority_high">Haute</string>
     <string name="message_priority_normal">Normale</string>
     <string name="message_info_show">Infos</string>
+    <string name="message_info_status">Statut de livraison</string>
+    <string name="message_status_delivered">Livré</string>
+    <string name="message_status_pending">En attente</string>
+    <string name="message_status_failed">Échec</string>
+    <string name="message_status_unknown">Inconnu</string>
 </resources>
