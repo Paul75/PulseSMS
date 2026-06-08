@@ -171,4 +171,11 @@
     <string name="lock_screen_use_fingerprint_button">Utiliser l\'empreinte</string>
     <string name="lock_biometric_prompt_title">Déverrouiller Pulse</string>
     <string name="lock_biometric_prompt_subtitle">Authentifiez-vous pour accéder à vos messages</string>
+    <string name="blocked_numbers_title">Numéros bloqués</string>
+    <string name="blocked_empty_title">Aucun numéro bloqué</string>
+    <string name="blocked_empty_body">Les expéditeurs bloqués apparaîtront ici.</string>
+    <string name="blocked_empty_status">Aucun bloqué</string>
+    <string name="blocked_back_to_settings">Retour aux paramètres</string>
+    <string name="blocked_count">%d bloqué(s)</string>
+    <string name="blocked_unblock">Débloquer</string>
 </resources>

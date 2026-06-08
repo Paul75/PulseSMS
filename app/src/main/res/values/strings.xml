@@ -171,4 +171,11 @@
     <string name="lock_screen_use_fingerprint_button">Use fingerprint</string>
     <string name="lock_biometric_prompt_title">Unlock Pulse</string>
     <string name="lock_biometric_prompt_subtitle">Authenticate to access your messages</string>
+    <string name="blocked_numbers_title">Blocked numbers</string>
+    <string name="blocked_empty_title">No blocked numbers</string>
+    <string name="blocked_empty_body">Blocked senders will appear here.</string>
+    <string name="blocked_empty_status">None blocked</string>
+    <string name="blocked_back_to_settings">Back to settings</string>
+    <string name="blocked_count">%d blocked</string>
+    <string name="blocked_unblock">Unblock</string>
 </resources>
