@@ -183,7 +183,7 @@ class SystemSmsReader(
                         MutableThreadAccumulator(
                             threadId = providerThreadId,
                             address = addr.normalizeAddressForDisplay(),
-                            snippet = context.getString(R.string.mms_body_placeholder),
+                            snippet = if (partUri != null) "" else context.getString(R.string.mms_body_placeholder),
                             date = dateMs,
                             lastMmsPartUri = partUri,
                         )
@@ -193,8 +193,9 @@ class SystemSmsReader(
                     if (!isRead && isInbound) accumulator.unreadCount += 1
                     if (dateMs > accumulator.date) {
                         accumulator.date = dateMs
-                        accumulator.snippet = context.getString(R.string.mms_body_placeholder)
-                        accumulator.lastMmsPartUri = MmsPartResolver.resolveFirstAttachmentUri(context, mmsId)
+                        val newPartUri = MmsPartResolver.resolveFirstAttachmentUri(context, mmsId)
+                        accumulator.snippet = if (newPartUri != null) "" else context.getString(R.string.mms_body_placeholder)
+                        accumulator.lastMmsPartUri = newPartUri
                     }
                 }
             }

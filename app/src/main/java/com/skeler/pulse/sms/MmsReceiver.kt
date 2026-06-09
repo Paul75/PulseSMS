@@ -153,6 +153,8 @@ class MmsReceiver : BroadcastReceiver() {
 
         val textBody = extractTextBody(conf).ifEmpty { context.getString(R.string.mms_body_placeholder) }
 
+        val imageUri = MmsPartResolver.resolveFirstAttachmentUri(context, mmsId)
+
         // Only set conversation address if we have a real number (not the fallback label)
         val senderForNotification = fromDisplay.takeUnless { it == context.getString(R.string.mms_sender_label) }.orEmpty()
 
@@ -161,6 +163,7 @@ class MmsReceiver : BroadcastReceiver() {
             sender = senderForNotification,
             body = textBody,
             messageId = mmsId,
+            imageUri = imageUri,
         )
         Log.i(TAG, "MMS notified for id=$mmsId sender=$senderForNotification")
     }
