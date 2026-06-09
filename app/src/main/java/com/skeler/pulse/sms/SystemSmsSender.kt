@@ -8,22 +8,19 @@ import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.util.Log
 import android.net.Uri
 import android.provider.Telephony
 import android.telephony.SmsManager
+import android.util.Log
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import com.klinker.android.send_message.Transaction
 import com.google.android.mms.MMSPart
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
-import java.io.OutputStream
-import java.net.HttpURLConnection
-import java.net.InetSocketAddress
-import java.net.Proxy
-import java.net.URL
+import java.io.File
 import java.util.Collections
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
@@ -275,19 +272,20 @@ internal class SystemSmsSender(
         val pduBytes = messageInfo.bytes ?: return
 
         val mmsUri = insertMmsRecord(threadId, address, text, imageBytesList, pduBytes.size, now)
-        val mmsId = mmsUri?.lastPathSegment
 
-        val success = try {
-            sendPduToMmsc(pduBytes)
-        } catch (_: Exception) {
-            false
-        }
+        val pduDir = File(context.cacheDir, "mms_parts")
+        pduDir.mkdirs()
+        val pduFile = File(pduDir, "send_${now}.dat")
+        pduFile.writeBytes(pduBytes)
+        val pduUri = FileProvider.getUriForFile(context, "${context.packageName}.mmsfileprovider", pduFile)
 
-        if (success && mmsUri != null) {
-            contentResolver.update(mmsUri, ContentValues().apply {
-                put("st", 128) // STATUS_COMPLETE
-            }, null, null)
-        }
+        val sentIntent = PendingIntent.getBroadcast(
+            context,
+            (now % Int.MAX_VALUE).toInt(),
+            Intent("com.skeler.pulse.mms.SENT").setPackage(context.packageName),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        SmsManager.getDefault().sendMultimediaMessage(context, pduUri, null, null, sentIntent)
         context.contentResolver.notifyChange(Telephony.Mms.CONTENT_URI, null)
     }
 
@@ -343,40 +341,6 @@ internal class SystemSmsSender(
             put("type", 151)
         })
         return mmsUri
-    }
-
-    private fun sendPduToMmsc(pduBytes: ByteArray): Boolean {
-        val apnUri = Uri.parse("content://telephony/carriers/preferapn")
-        val cursor = contentResolver.query(apnUri, null, null, null, null) ?: return false
-        val mmsc = cursor.use { c ->
-            if (!c.moveToFirst()) null else c.getString(c.getColumnIndexOrThrow("mmsc"))
-        } ?: return false
-        val proxy = contentResolver.query(apnUri, null, null, null, null)?.use { c ->
-            if (!c.moveToFirst()) null else c.getString(c.getColumnIndexOrThrow("mmsproxy"))
-        }?.takeIf { it?.isNotBlank() == true }
-        val port = contentResolver.query(apnUri, null, null, null, null)?.use { c ->
-            if (!c.moveToFirst()) null else c.getString(c.getColumnIndexOrThrow("mmsport"))
-        }?.takeIf { it?.isNotBlank() == true }?.toIntOrNull() ?: 80
-
-        val url = URL(mmsc)
-        val connection = if (proxy != null) {
-            url.openConnection(Proxy(Proxy.Type.HTTP, InetSocketAddress(proxy, port)))
-        } else {
-            url.openConnection()
-        } as HttpURLConnection
-
-        connection.requestMethod = "POST"
-        connection.setRequestProperty("Content-Type", "application/vnd.wap.mms-message")
-        connection.doOutput = true
-        connection.connectTimeout = 30_000
-        connection.readTimeout = 60_000
-        return try {
-            connection.outputStream.use { it.write(pduBytes) }
-            val code = connection.responseCode
-            code in 200..299
-        } finally {
-            connection.disconnect()
-        }
     }
 
     private fun deliveryCallbackToken(address: String, messageUri: Uri?): String =
