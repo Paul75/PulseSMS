@@ -370,14 +370,18 @@ class SystemSmsReader(
 
             // Resolve the other-party address once — all MMS in this thread share
             // the same contact address regardless of direction (sent vs received)
-            val resolvedAddress = if (c.moveToFirst()) {
+            val (resolvedAddress, fromAddress, toAddress) = if (c.moveToFirst()) {
                 val firstMmsId = c.getLong(idIdx)
                 val firstMsgBox = if (c.getColumnIndex("msg_box") >= 0) c.getInt(msgBoxIdx) else null
                 try {
-                    MmsAddressResolver.resolveAddress(context, firstMmsId, firstMsgBox)
+                    val ra = MmsAddressResolver.resolveAddress(context, firstMmsId, firstMsgBox)
                         .ifEmpty { address }
+                    MmsAddressResolver.resolveBothAddresses(context, firstMmsId)
+                        .let { (fa, ta) ->
+                            Triple(ra, fa.ifEmpty { null }, ta.ifEmpty { null })
+                        }
                 } catch (e: SecurityException) {
-                    address
+                    Triple(address, null, null)
                 }.also { c.moveToPosition(-1) }
             } else {
                 return@use emptyList()
@@ -419,6 +423,8 @@ class SystemSmsReader(
                         read = readInt == 1,
                         threadId = resolvedThreadId,
                         mmsPartUri = partUri,
+                        fromAddress = fromAddress,
+                        toAddress = toAddress,
                     ),
                 )
             }

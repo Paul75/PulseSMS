@@ -541,11 +541,9 @@ private fun MessageInfoContent(message: SystemSms) {
         }
 
         Spacer(modifier = Modifier.height(10.dp))
-        if (message.isInbound) {
-            InfoRow(label = stringResource(R.string.message_info_from), value = message.address)
-        } else {
-            InfoRow(label = stringResource(R.string.message_info_to), value = message.address)
-        }
+        InfoRow(label = stringResource(R.string.message_info_from), value = message.fromAddress ?: message.address)
+        Spacer(modifier = Modifier.height(10.dp))
+        InfoRow(label = stringResource(R.string.message_info_to), value = message.toAddress ?: message.address)
 
         if (message.dateSent != null && message.dateSent > 0L) {
             Spacer(modifier = Modifier.height(10.dp))

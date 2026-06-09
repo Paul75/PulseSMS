@@ -37,4 +37,29 @@ internal object MmsAddressResolver {
             ""
         }
     }
+
+    fun resolveBothAddresses(context: Context, mmsId: Long): Pair<String, String> {
+        val uri = Uri.withAppendedPath(Uri.parse("content://mms/$mmsId"), "addr")
+        val cursor = context.contentResolver.query(
+            uri,
+            arrayOf("address", "type"),
+            null,
+            null,
+            null,
+        ) ?: return "" to ""
+
+        return cursor.use { c ->
+            var from = ""
+            var to = ""
+            while (c.moveToNext()) {
+                val type = c.getInt(c.getColumnIndexOrThrow("type"))
+                val address = c.getString(c.getColumnIndexOrThrow("address")) ?: ""
+                when (type) {
+                    137 -> from = address
+                    151 -> to = address
+                }
+            }
+            from to to
+        }
+    }
 }
