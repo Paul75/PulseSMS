@@ -8,6 +8,7 @@ import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.util.Log
 import android.net.Uri
 import android.provider.Telephony
 import android.telephony.SmsManager
@@ -230,6 +231,15 @@ internal class SystemSmsSender(
     }
 
     suspend fun sendMms(address: String, text: String, imageUris: List<Uri> = emptyList()) = withContext(ioDispatcher) {
+        try {
+            sendMmsInternal(address, text, imageUris)
+        } catch (e: Exception) {
+            Log.e("SystemSmsSender", "sendMms failed", e)
+            throw e
+        }
+    }
+
+    private suspend fun sendMmsInternal(address: String, text: String, imageUris: List<Uri>) {
         val threadId = Telephony.Threads.getOrCreateThreadId(context, address)
         val imageBytesList = imageUris.mapNotNull { uri ->
             runCatching {
@@ -262,7 +272,7 @@ internal class SystemSmsSender(
             parts.toTypedArray(),
             text.take(40),
         )
-        val pduBytes = messageInfo.bytes ?: return@withContext
+        val pduBytes = messageInfo.bytes ?: return
 
         val mmsUri = insertMmsRecord(threadId, address, text, imageBytesList, pduBytes.size, now)
         val mmsId = mmsUri?.lastPathSegment
