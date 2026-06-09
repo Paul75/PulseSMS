@@ -33,7 +33,7 @@ internal class SystemSmsSender(
     private val contentResolver: ContentResolver get() = context.contentResolver
 
     @Suppress("DEPRECATION")
-    suspend fun sendSms(address: String, body: String, subscriptionId: Int? = null, waitForDelivery: Boolean = false) = withContext(ioDispatcher) {
+    suspend fun sendSms(address: String, body: String, subscriptionId: Int? = null, waitForDelivery: Boolean = true) = withContext(ioDispatcher) {
         val smsManager = if (subscriptionId != null) {
             SmsManager.getSmsManagerForSubscriptionId(subscriptionId)
         } else {
@@ -209,6 +209,12 @@ internal class SystemSmsSender(
     suspend fun sendSmsFireAndForget(address: String, body: String) = withContext(ioDispatcher) {
         val smsManager = SmsManager.getDefault()
         val messageUri = insertOutgoingMessage(address, body, Telephony.Sms.MESSAGE_TYPE_SENT)
+        if (messageUri != null) {
+            val values = ContentValues().apply {
+                put(Telephony.Sms.STATUS, Telephony.Sms.STATUS_COMPLETE)
+            }
+            contentResolver.update(messageUri, values, null, null)
+        }
         try {
             val parts = smsManager.divideMessage(body)
             smsManager.sendMultipartTextMessage(address, null, parts, null, null)

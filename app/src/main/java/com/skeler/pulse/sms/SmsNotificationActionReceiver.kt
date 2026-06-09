@@ -73,7 +73,7 @@ class SmsNotificationActionReceiver : BroadcastReceiver() {
         val pendingResult = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                SystemSmsSender(context, Dispatchers.IO).sendSms(address, replyText)
+                SystemSmsSender(context, Dispatchers.IO).sendSmsFireAndForget(address, replyText)
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to send reply via SMS", e)
             } finally {
