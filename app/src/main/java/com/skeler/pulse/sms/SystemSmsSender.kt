@@ -228,24 +228,17 @@ internal class SystemSmsSender(
 
     suspend fun sendMms(address: String, text: String, imageUris: List<Uri> = emptyList()) = withContext(ioDispatcher) {
         val threadId = Telephony.Threads.getOrCreateThreadId(context, address)
-        val maxDimension = 2048
         val bitmaps = imageUris.mapNotNull { uri ->
             runCatching {
-                context.contentResolver.openInputStream(uri)?.use { stream ->
-                    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-                    BitmapFactory.decodeStream(stream, null, bounds)
-                    val sampleSize = java.lang.Math.max(
-                            java.lang.Math.max(
-                                bounds.outWidth / maxDimension,
-                                bounds.outHeight / maxDimension
-                            ),
-                            1
-                        )
-                    context.contentResolver.openInputStream(uri)?.use { stream2 ->
-                        val scaled = BitmapFactory.Options().apply { inSampleSize = sampleSize }
-                        BitmapFactory.decodeStream(stream2, null, scaled)
-                    }
-                }
+                val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: return@runCatching null
+                val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+                val sampleSize = maxOf(
+                    maxOf(bounds.outWidth / 2048, bounds.outHeight / 2048),
+                    1,
+                )
+                val scaled = BitmapFactory.Options().apply { inSampleSize = sampleSize }
+                BitmapFactory.decodeByteArray(bytes, 0, bytes.size, scaled)
             }.getOrNull()
         }
         val message = if (bitmaps.isNotEmpty()) {
