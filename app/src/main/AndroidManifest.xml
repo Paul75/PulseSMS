@@ -120,7 +120,7 @@
         <!-- FileProvider — serves MMS images from our cache dir (bypasses MMS provider's openFile) -->
         <provider
             android:name="androidx.core.content.FileProvider"
-            android:authorities="${applicationId}.mmsfileprovider;${applicationId}.MmsFileProvider"
+            android:authorities="${applicationId}.mmsfileprovider"
             android:exported="false"
             android:grantUriPermissions="true">
             <meta-data

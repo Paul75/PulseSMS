@@ -12,6 +12,7 @@ import android.net.Uri
 import android.provider.Telephony
 import android.telephony.SmsManager
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import com.klinker.android.send_message.Transaction
 import com.google.android.mms.MMSPart
 import kotlinx.coroutines.CoroutineDispatcher
@@ -260,14 +261,12 @@ internal class SystemSmsSender(
         )
         val pduBytes = messageInfo.bytes ?: return@withContext
 
-        val pduFile = File(context.cacheDir, "send_${now}.dat")
+        val pduDir = File(context.cacheDir, "mms_parts")
+        pduDir.mkdirs()
+        val pduFile = File(pduDir, "send_${now}.dat")
         pduFile.writeBytes(pduBytes)
 
-        val pduUri = Uri.Builder()
-            .scheme("content")
-            .authority("${context.packageName}.MmsFileProvider")
-            .path(pduFile.absolutePath)
-            .build()
+        val pduUri = FileProvider.getUriForFile(context, "${context.packageName}.mmsfileprovider", pduFile)
 
         val mmsValues = ContentValues().apply {
             put("thread_id", threadId)
