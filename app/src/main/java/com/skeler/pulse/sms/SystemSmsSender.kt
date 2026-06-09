@@ -245,7 +245,7 @@ internal class SystemSmsSender(
             Message(text, address, bitmaps.toTypedArray())
         } else {
             Message(text, address)
-        }
+        }.apply { save = true }
         val settings = Settings().apply { setUseSystemSending(true) }
         Transaction(context, settings).sendNewMessage(message, threadId)
         context.contentResolver.notifyChange(Telephony.Mms.CONTENT_URI, null)
