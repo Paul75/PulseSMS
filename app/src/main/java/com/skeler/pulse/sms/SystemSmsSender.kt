@@ -13,14 +13,12 @@ import android.provider.Telephony
 import android.telephony.SmsManager
 import android.util.Log
 import androidx.core.content.ContextCompat
-import androidx.core.content.FileProvider
 import com.klinker.android.send_message.Transaction
 import com.google.android.mms.MMSPart
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
-import java.io.File
 import java.util.Collections
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
@@ -272,20 +270,13 @@ internal class SystemSmsSender(
         val pduBytes = messageInfo.bytes ?: return
 
         val mmsUri = insertMmsRecord(threadId, address, text, imageBytesList, pduBytes.size, now)
-
-        val pduDir = File(context.cacheDir, "mms_parts")
-        pduDir.mkdirs()
-        val pduFile = File(pduDir, "send_${now}.dat")
-        pduFile.writeBytes(pduBytes)
-        val pduUri = FileProvider.getUriForFile(context, "${context.packageName}.mmsfileprovider", pduFile)
-
         val sentIntent = PendingIntent.getBroadcast(
             context,
             (now % Int.MAX_VALUE).toInt(),
             Intent("com.skeler.pulse.mms.SENT").setPackage(context.packageName),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
-        SmsManager.getDefault().sendMultimediaMessage(context, pduUri, null, null, sentIntent)
+        SmsManager.getDefault().sendMultimediaMessage(context, mmsUri, null, null, sentIntent)
         context.contentResolver.notifyChange(Telephony.Mms.CONTENT_URI, null)
     }
 
