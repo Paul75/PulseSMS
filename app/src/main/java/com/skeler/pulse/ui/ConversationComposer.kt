@@ -804,6 +804,7 @@ private fun CameraPreviewContent(
                     val camera = cameraRef.value ?: return@IconButton
                     try {
                         camera.takePicture(null, null, object : Camera.PictureCallback {
+                            @Deprecated("Camera.PictureCallback is deprecated")
                             @Suppress("DEPRECATION")
                             override fun onPictureTaken(data: ByteArray?, camera: Camera) {
                                 if (data != null) {
