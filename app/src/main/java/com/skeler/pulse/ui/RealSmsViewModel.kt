@@ -57,6 +57,7 @@ class RealSmsViewModel(
     private var activeConversationThreadId: Long? = null
     private var pendingReadTarget: ReadConversationTarget? = null
     private var lastSendRequest: PendingSendRequest? = null
+    private var sendSequence = 0
     private val loadedOlderMessages = mutableListOf<SystemSms>()
     private var hasMoreMessages: Boolean = false
     private var totalMessageCount: Int = 0
@@ -254,6 +255,7 @@ class RealSmsViewModel(
     }
 
     fun closeConversation() {
+        sendJob?.cancel()
         sendJob = null
         conversationJob?.cancel()
         conversationJob = null
@@ -276,7 +278,6 @@ class RealSmsViewModel(
     fun sendMessage(address: String, body: String, imageUri: Uri? = null, subscriptionId: Int? = null) {
         val trimmedBody = body.trim()
         if (trimmedBody.isBlank() && imageUri == null) return
-        if (!shouldStartSmsSend(_sendState.value)) return
 
         val request = PendingSendRequest(
             address = address,
@@ -285,9 +286,10 @@ class RealSmsViewModel(
             subscriptionId = subscriptionId,
         )
         lastSendRequest = request
-        _sendState.value = SendState.Sending(trimmedBody)
 
         sendJob?.cancel()
+        val seq = ++sendSequence
+        _sendState.value = SendState.Sending(trimmedBody)
         sendJob = viewModelScope.launch {
             try {
                 if (imageUri != null) {
@@ -295,11 +297,21 @@ class RealSmsViewModel(
                 } else {
                     smsReader.sendSms(address, trimmedBody, subscriptionId)
                 }
-                _sendState.value = SendState.Sent(trimmedBody)
-            } catch (exception: CancellationException) {
-                throw exception
+                if (sendSequence == seq) {
+                    _sendState.value = SendState.Sent(trimmedBody)
+                }
+            } catch (_: CancellationException) {
+                if (sendSequence == seq) {
+                    _sendState.value = SendState.Idle
+                }
             } catch (_: Exception) {
-                _sendState.value = SendState.Failed(trimmedBody)
+                if (sendSequence == seq) {
+                    _sendState.value = SendState.Failed(trimmedBody)
+                }
+            } catch (_: Throwable) {
+                if (sendSequence == seq) {
+                    _sendState.value = SendState.Failed(trimmedBody)
+                }
             }
         }
     }

@@ -155,8 +155,8 @@ class SystemSmsReader(
             val mmsCursor = contentResolver.query(
                 Telephony.Mms.CONTENT_URI,
                 arrayOf("_id", "date", "read", "msg_box", "thread_id"),
-                "msg_box = ?",
-                arrayOf(Telephony.Mms.MESSAGE_BOX_INBOX.toString()),
+                "msg_box IN (${MMS_READ_BOXES.joinToString(", ") { "?" }})",
+                MMS_READ_BOXES.map { it.toString() }.toTypedArray(),
                 "date DESC",
             )
             mmsCursor?.use { c ->
@@ -326,11 +326,14 @@ class SystemSmsReader(
         if (resolvedThreadId == null || resolvedThreadId <= 0L) return emptyList()
 
         val hasLimit = limit < Int.MAX_VALUE
-        val clauses = mutableListOf("thread_id = ?", "msg_box = ?")
+        val placeholder = MMS_READ_BOXES.joinToString(", ") { "?" }
+        val clauses = mutableListOf("thread_id = ?", "msg_box IN ($placeholder)")
         if (beforeDate != null) clauses.add("date < ?")
         val selection = clauses.joinToString(" AND ")
 
-        val selectionArgs = mutableListOf(resolvedThreadId.toString(), Telephony.Mms.MESSAGE_BOX_INBOX.toString())
+        val selectionArgs = mutableListOf(resolvedThreadId.toString()).apply {
+            addAll(MMS_READ_BOXES.map { it.toString() })
+        }
         if (beforeDate != null) selectionArgs.add((beforeDate / 1000).toString())
 
         val sortOrder = if (hasLimit || beforeDate != null) {
@@ -390,6 +393,8 @@ class SystemSmsReader(
 
                 val smsType = when (msgBox) {
                     Telephony.Mms.MESSAGE_BOX_INBOX -> Telephony.Sms.MESSAGE_TYPE_INBOX
+                    Telephony.Mms.MESSAGE_BOX_OUTBOX -> Telephony.Sms.MESSAGE_TYPE_OUTBOX
+                    Telephony.Mms.MESSAGE_BOX_FAILED -> Telephony.Sms.MESSAGE_TYPE_FAILED
                     else -> Telephony.Sms.MESSAGE_TYPE_SENT
                 }
 
@@ -629,12 +634,13 @@ class SystemSmsReader(
             Telephony.Threads.getOrCreateThreadId(context, address).takeIf { it > 0L }
         }.getOrNull()
         if (resolvedThreadId == null || resolvedThreadId <= 0L) return 0
+        val placeholder = MMS_READ_BOXES.joinToString(", ") { "?" }
         val cursor = try {
             contentResolver.query(
                 Telephony.Mms.CONTENT_URI,
                 arrayOf("_id"),
-                "thread_id = ? AND msg_box = ?",
-                arrayOf(resolvedThreadId.toString(), Telephony.Mms.MESSAGE_BOX_INBOX.toString()),
+                "thread_id = ? AND msg_box IN ($placeholder)",
+                arrayOf(resolvedThreadId.toString()).plus(MMS_READ_BOXES.map { it.toString() }.toTypedArray()),
                 null,
             )
         } catch (e: SecurityException) {
@@ -646,6 +652,13 @@ class SystemSmsReader(
     companion object {
         private const val TAG = "SystemSmsReader"
         internal const val DEFAULT_MESSAGE_LIMIT = 200
+
+        private val MMS_READ_BOXES = listOf(
+            Telephony.Mms.MESSAGE_BOX_INBOX,
+            Telephony.Mms.MESSAGE_BOX_OUTBOX,
+            Telephony.Mms.MESSAGE_BOX_SENT,
+            Telephony.Mms.MESSAGE_BOX_FAILED,
+        )
         private val SMS_PROJECTION = arrayOf(
             Telephony.Sms._ID,
             Telephony.Sms.ADDRESS,

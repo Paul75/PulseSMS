@@ -215,6 +215,7 @@ internal class SystemSmsSender(
         val message = if (bitmap != null) Message(text, address, bitmap) else Message(text, address)
         val settings = Settings().apply { setUseSystemSending(true) }
         Transaction(context, settings).sendNewMessage(message, threadId)
+        context.contentResolver.notifyChange(Telephony.Mms.CONTENT_URI, null)
     }
 
     private fun deliveryCallbackToken(address: String, messageUri: Uri?): String =

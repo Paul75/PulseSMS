@@ -273,6 +273,38 @@ internal fun ConversationComposer(
             }
         }
         var showAttachmentMenu by remember { mutableStateOf(false) }
+        if (selectedImageUri != null) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(80.dp)
+                        .clip(RoundedCornerShape(12.dp)),
+                ) {
+                    AsyncImage(
+                        model = selectedImageUri,
+                        contentDescription = stringResource(R.string.conversation_attach_content_description),
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop,
+                    )
+                }
+                Spacer(Modifier.weight(1f))
+                IconButton(
+                    onClick = { onImageSelected(null) },
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Close,
+                        contentDescription = "Remove",
+                        tint = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+            }
+        }
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(ConversationComposerTokens.contentSpacing),
@@ -290,33 +322,6 @@ internal fun ConversationComposer(
                     modifier = Modifier.size(ConversationComposerTokens.attachmentIconSize),
                     tint = colors.onSurfaceVariant.copy(alpha = ConversationComposerTokens.inactiveAlpha),
                 )
-            }
-            if (selectedImageUri != null) {
-                Box(
-                    modifier = Modifier
-                        .size(ConversationComposerTokens.attachmentButtonSize)
-                        .clip(RoundedCornerShape(12.dp)),
-                ) {
-                    AsyncImage(
-                        model = selectedImageUri,
-                        contentDescription = stringResource(R.string.conversation_attach_content_description),
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop,
-                    )
-                    IconButton(
-                        onClick = { onImageSelected(null) },
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .size(20.dp),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Close,
-                            contentDescription = "Remove",
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.onSurface,
-                        )
-                    }
-                }
             }
             Row(
                 modifier = Modifier
