@@ -173,9 +173,10 @@ class SystemSmsReader(
                     val isRead = c.getInt(readIdx) == 1
                     val dateMs = dateSecs * 1000L
                     if (providerThreadId <= 0L) continue
+                    val mmsMsgBox = c.getInt(msgBoxIdx)
                     val accumulator = threads.getOrPut(providerThreadId) {
                         val addr = try {
-                            MmsAddressResolver.resolveAddress(context, mmsId)
+                            MmsAddressResolver.resolveAddress(context, mmsId, mmsMsgBox)
                                 .ifEmpty { "Unknown" }
                         } catch (e: SecurityException) {
                             "Unknown"
@@ -367,11 +368,14 @@ class SystemSmsReader(
             val readIdx = c.getColumnIndexOrThrow("read")
             val msgBoxIdx = c.getColumnIndexOrThrow("msg_box")
 
-            // Resolve sender address once — all MMS in this thread share the same sender
+            // Resolve the other-party address once — all MMS in this thread share
+            // the same contact address regardless of direction (sent vs received)
             val resolvedAddress = if (c.moveToFirst()) {
                 val firstMmsId = c.getLong(idIdx)
+                val firstMsgBox = if (c.getColumnIndex("msg_box") >= 0) c.getInt(msgBoxIdx) else null
                 try {
-                    MmsAddressResolver.resolveAddress(context, firstMmsId).ifEmpty { address }
+                    MmsAddressResolver.resolveAddress(context, firstMmsId, firstMsgBox)
+                        .ifEmpty { address }
                 } catch (e: SecurityException) {
                     address
                 }.also { c.moveToPosition(-1) }
