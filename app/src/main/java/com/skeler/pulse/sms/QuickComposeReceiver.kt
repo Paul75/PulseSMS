@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.telephony.PhoneNumberUtils
 import android.telephony.TelephonyManager
+import java.util.Locale
 import android.util.Log
 import android.widget.Toast
 import androidx.core.app.RemoteInput
@@ -82,26 +83,32 @@ class QuickComposeReceiver : BroadcastReceiver() {
     }
 
     private fun normalizePhoneNumber(context: Context, raw: String): String? {
-        val cleaned = raw.replace(Regex("[^\\d+]"), "")
+        val trimmed = raw.trim()
+        if (trimmed.isEmpty()) return null
+
+        if (trimmed.startsWith("+")) {
+            val digits = trimmed.count { it.isDigit() }
+            if (digits < 8) return null
+            return trimmed
+        }
+
+        val cleaned = trimmed.replace(Regex("[^\\d+]"), "")
         val digits = cleaned.count { it.isDigit() }
         if (digits < 8) return null
-        if (cleaned.count { it == '+' } > 1) return null
-
-        if (cleaned.startsWith("+")) return cleaned
 
         val country = try {
             val tm = context.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager
             tm?.simCountryIso?.uppercase()
                 ?: tm?.networkCountryIso?.uppercase()
-                ?: java.util.Locale.getDefault().country.uppercase()
+                ?: Locale.getDefault().country.uppercase()
         } catch (e: Exception) {
-            java.util.Locale.getDefault().country.uppercase()
+            Locale.getDefault().country.uppercase()
         }
 
         return try {
-            PhoneNumberUtils.formatNumberToE164(cleaned, country) ?: cleaned
+            PhoneNumberUtils.formatNumberToE164(cleaned, country) ?: trimmed
         } catch (e: Exception) {
-            cleaned
+            trimmed
         }
     }
 
