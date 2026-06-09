@@ -11,9 +11,7 @@ import android.content.IntentFilter
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.provider.Telephony
-import android.telephony.PhoneNumberUtils
 import android.telephony.SmsManager
-import android.telephony.TelephonyManager
 import androidx.core.content.ContextCompat
 import com.klinker.android.send_message.Message
 import com.klinker.android.send_message.Settings
@@ -23,7 +21,6 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import java.util.Collections
-import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.coroutines.resume
@@ -244,20 +241,12 @@ internal class SystemSmsSender(
                 BitmapFactory.decodeByteArray(bytes, 0, bytes.size, scaled)
             }.getOrNull()
         }
-        val fromAddress = runCatching {
-            val tm = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
-            tm.line1Number?.takeIf { it.isNotBlank() }
-                ?.let { PhoneNumberUtils.formatNumberToE164(it, Locale.getDefault().country) }
-        }.getOrNull()
         val message = if (bitmaps.isNotEmpty()) {
             Message(text, address, bitmaps.toTypedArray())
         } else {
             Message(text, address)
-        }.apply {
-            save = true
-            fromAddress?.let { setFromAddress(it) }
-        }
-        val settings = Settings().apply { setUseSystemSending(true) }
+        }.apply { save = true }
+        val settings = Settings()
         Transaction(context, settings).sendNewMessage(message, threadId)
         context.contentResolver.notifyChange(Telephony.Mms.CONTENT_URI, null)
     }
