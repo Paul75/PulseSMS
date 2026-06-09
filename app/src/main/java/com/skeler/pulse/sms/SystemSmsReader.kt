@@ -409,7 +409,7 @@ class SystemSmsReader(
                         id = mmsId,
                         isMms = true,
                         address = resolvedAddress,
-                        body = body.ifEmpty { context.getString(R.string.mms_body_placeholder) },
+                        body = if (body.isEmpty() && partUri != null) "" else body.ifEmpty { context.getString(R.string.mms_body_placeholder) },
                         date = dateSecs * 1000L,
                         type = smsType,
                         read = readInt == 1,
