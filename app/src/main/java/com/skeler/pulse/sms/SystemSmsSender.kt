@@ -203,16 +203,33 @@ internal class SystemSmsSender(
         }
     }
 
-    suspend fun sendMms(address: String, text: String, imageUri: Uri?) = withContext(ioDispatcher) {
+    suspend fun sendMms(address: String, text: String, imageUris: List<Uri> = emptyList()) = withContext(ioDispatcher) {
         val threadId = Telephony.Threads.getOrCreateThreadId(context, address)
-        val bitmap = imageUri?.let {
+        val maxDimension = 2048
+        val bitmaps = imageUris.mapNotNull { uri ->
             runCatching {
-                context.contentResolver.openInputStream(it)?.use { stream ->
-                    BitmapFactory.decodeStream(stream)
+                context.contentResolver.openInputStream(uri)?.use { stream ->
+                    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                    BitmapFactory.decodeStream(stream, null, bounds)
+                    val sampleSize = java.lang.Math.max(
+                            java.lang.Math.max(
+                                bounds.outWidth / maxDimension,
+                                bounds.outHeight / maxDimension
+                            ),
+                            1
+                        )
+                    context.contentResolver.openInputStream(uri)?.use { stream2 ->
+                        val scaled = BitmapFactory.Options().apply { inSampleSize = sampleSize }
+                        BitmapFactory.decodeStream(stream2, null, scaled)
+                    }
                 }
             }.getOrNull()
         }
-        val message = if (bitmap != null) Message(text, address, bitmap) else Message(text, address)
+        val message = if (bitmaps.isNotEmpty()) {
+            Message(text, address, bitmaps.toTypedArray())
+        } else {
+            Message(text, address)
+        }
         val settings = Settings().apply { setUseSystemSending(true) }
         Transaction(context, settings).sendNewMessage(message, threadId)
         context.contentResolver.notifyChange(Telephony.Mms.CONTENT_URI, null)

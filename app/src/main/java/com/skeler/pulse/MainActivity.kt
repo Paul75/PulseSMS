@@ -166,8 +166,8 @@ class MainActivity : FragmentActivity() {
                     onOpenConversation = { address, threadId ->
                         realSmsViewModel.openConversation(address, threadId)
                     },
-                    onSendMessage = { address, body, imageUri, subscriptionId ->
-                        realSmsViewModel.sendMessage(address, body, imageUri, subscriptionId)
+                    onSendMessage = { address, body, imageUris, subscriptionId ->
+                        realSmsViewModel.sendMessage(address, body, imageUris, subscriptionId)
                     },
                     themeViewModel = themeViewModel,
                     onRequestDefaultSms = { requestDefaultSmsApp() },

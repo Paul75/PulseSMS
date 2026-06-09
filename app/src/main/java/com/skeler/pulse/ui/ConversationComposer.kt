@@ -1,9 +1,23 @@
+@file:Suppress("DEPRECATION")
+
 package com.skeler.pulse.ui
+
+import android.Manifest
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
+import android.provider.MediaStore
 import android.provider.Telephony
+import android.util.Log
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import android.hardware.Camera
+import android.view.SurfaceHolder
+import android.view.SurfaceView
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FiniteAnimationSpec
@@ -16,13 +30,16 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
@@ -43,7 +60,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -88,6 +108,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -100,10 +121,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
@@ -119,6 +142,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import com.skeler.pulse.R
 import com.skeler.pulse.design.component.SerafinaAvatar
 import com.skeler.pulse.design.component.SerafinaProgressIndicator
@@ -146,19 +170,19 @@ internal fun ConversationComposer(
     sendState: SendState,
     simOptions: List<NewChatSimOption>,
     selectedSimKey: String?,
-    selectedImageUri: Uri? = null,
+    selectedImageUris: List<Uri> = emptyList(),
     onSimOptionClick: (NewChatSimOption) -> Unit,
     onDraftChange: (String) -> Unit,
     onSend: () -> Unit,
-    onImageSelected: (Uri?) -> Unit = {},
+    onImageSelected: (List<Uri>) -> Unit = {},
     onImagePickFromGallery: () -> Unit = {},
     onTakePhoto: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val reducedMotion = rememberReducedMotionEnabled()
     val isSending = sendState is SendState.Sending
-    val canSend by remember(draft, isSending, selectedImageUri) {
-        derivedStateOf { (draft.isNotBlank() || selectedImageUri != null) && !isSending }
+    val canSend by remember(draft, isSending, selectedImageUris) {
+        derivedStateOf { (draft.isNotBlank() || selectedImageUris.isNotEmpty()) && !isSending }
     }
     val selectedSim = remember(simOptions, selectedSimKey) {
         simOptions.firstOrNull { option -> option.key == selectedSimKey } ?: simOptions.firstOrNull()
@@ -273,35 +297,36 @@ internal fun ConversationComposer(
             }
         }
         var showAttachmentMenu by remember { mutableStateOf(false) }
-        if (selectedImageUri != null) {
+        if (selectedImageUris.isNotEmpty()) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
                     .padding(bottom = 6.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(80.dp)
-                        .clip(RoundedCornerShape(12.dp)),
-                ) {
-                    AsyncImage(
-                        model = selectedImageUri,
-                        contentDescription = stringResource(R.string.conversation_attach_content_description),
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop,
-                    )
-                }
-                Spacer(Modifier.weight(1f))
-                IconButton(
-                    onClick = { onImageSelected(null) },
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Close,
-                        contentDescription = "Remove",
-                        tint = MaterialTheme.colorScheme.onSurface,
-                    )
+                selectedImageUris.forEach { uri ->
+                    Box(modifier = Modifier.size(80.dp).clip(RoundedCornerShape(12.dp))) {
+                        AsyncImage(
+                            model = uri,
+                            contentDescription = stringResource(R.string.conversation_attach_content_description),
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop,
+                        )
+                        IconButton(
+                            onClick = { onImageSelected(selectedImageUris - uri) },
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .size(22.dp),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Close,
+                                contentDescription = "Remove",
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -441,6 +466,48 @@ internal fun ConversationComposer(
             }
         }
         if (showAttachmentMenu) {
+            var selectedAttachmentTab by remember { mutableStateOf(AttachmentTab.GALLERY) }
+            val mediaPermission = if (Build.VERSION.SDK_INT >= 33) {
+                Manifest.permission.READ_MEDIA_IMAGES
+            } else {
+                Manifest.permission.READ_EXTERNAL_STORAGE
+            }
+            val hasMediaPermission = remember {
+                ContextCompat.checkSelfPermission(context, mediaPermission) == PackageManager.PERMISSION_GRANTED
+            }
+            var mediaPermissionGranted by remember { mutableStateOf(hasMediaPermission) }
+            val mediaPermissionLauncher = rememberLauncherForActivityResult(
+                ActivityResultContracts.RequestPermission(),
+            ) { granted -> mediaPermissionGranted = granted }
+            val recentPhotos by produceState<List<Uri>>(
+                initialValue = emptyList(),
+                key1 = showAttachmentMenu,
+                key2 = mediaPermissionGranted,
+            ) {
+                if (!mediaPermissionGranted) return@produceState
+                value = withContext(Dispatchers.IO) {
+                    val uris = mutableListOf<Uri>()
+                    try {
+                        context.contentResolver.query(
+                            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                            arrayOf(MediaStore.Images.Media._ID),
+                            null, null,
+                            "${MediaStore.Images.Media.DATE_ADDED} DESC"
+                        )?.use { cursor ->
+                            while (cursor.moveToNext()) {
+                                val id = cursor.getLong(0)
+                                uris.add(
+                                    Uri.withAppendedPath(
+                                        MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                                        id.toString()
+                                    )
+                                )
+                            }
+                        }
+                    } catch (_: SecurityException) {}
+                    uris
+                }
+            }
             ModalBottomSheet(
                 onDismissRequest = { showAttachmentMenu = false },
                 sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
@@ -449,28 +516,154 @@ internal fun ConversationComposer(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 32.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalAlignment = Alignment.Top,
                     ) {
-                        AttachmentOption(
-                            icon = Icons.Rounded.Photo,
-                            label = stringResource(R.string.attachment_gallery),
-                            onClick = {
-                                showAttachmentMenu = false
-                                onImagePickFromGallery()
-                            },
-                        )
-                        AttachmentOption(
-                            icon = Icons.Rounded.CameraAlt,
-                            label = stringResource(R.string.attachment_camera),
-                            onClick = {
-                                showAttachmentMenu = false
-                                onTakePhoto()
-                            },
-                        )
+                        // Left: tab buttons
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                            modifier = Modifier.padding(top = 12.dp),
+                        ) {
+                            AttachmentOption(
+                                icon = Icons.Rounded.CameraAlt,
+                                label = stringResource(R.string.attachment_camera),
+                                selected = selectedAttachmentTab == AttachmentTab.CAMERA,
+                                iconOnly = true,
+                                onClick = { selectedAttachmentTab = AttachmentTab.CAMERA },
+                            )
+                            AttachmentOption(
+                                icon = Icons.Rounded.Photo,
+                                label = stringResource(R.string.attachment_gallery),
+                                selected = selectedAttachmentTab == AttachmentTab.GALLERY,
+                                iconOnly = true,
+                                onClick = { selectedAttachmentTab = AttachmentTab.GALLERY },
+                            )
+                        }
+                        // Right: tab content
+                        var pendingGallerySelection by remember(showAttachmentMenu) { mutableStateOf(emptySet<Uri>()) }
+                        when (selectedAttachmentTab) {
+                            AttachmentTab.CAMERA -> {
+                                CameraPreviewContent(
+                                    onPhotoTaken = { uri ->
+                                        onImageSelected(selectedImageUris + uri)
+                                        showAttachmentMenu = false
+                                    },
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .heightIn(max = 320.dp),
+                                )
+                            }
+                            AttachmentTab.GALLERY -> {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    if (!mediaPermissionGranted) {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(16.dp),
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.Center,
+                                        ) {
+                                            Text(
+                                                text = "Allow access to photos",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                            Spacer(Modifier.height(8.dp))
+                                            FilledTonalButton(
+                                                onClick = { mediaPermissionLauncher.launch(mediaPermission) },
+                                            ) {
+                                                Text("Grant permission")
+                                            }
+                                        }
+                                    } else if (recentPhotos.isNotEmpty()) {
+                                        LazyVerticalGrid(
+                                            columns = GridCells.Fixed(3),
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .heightIn(max = 240.dp),
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                                        ) {
+                                            recentPhotos.forEach { uri ->
+                                                item(key = uri.toString()) {
+                                                    Box(modifier = Modifier.aspectRatio(1f)) {
+                                                        AsyncImage(
+                                                            model = uri,
+                                                            contentDescription = null,
+                                                            modifier = Modifier
+                                                                .matchParentSize()
+                                                                .clip(RoundedCornerShape(4.dp))
+                                                                .clickable {
+                                                                    pendingGallerySelection = if (uri in pendingGallerySelection) {
+                                                                        pendingGallerySelection - uri
+                                                                    } else {
+                                                                        pendingGallerySelection + uri
+                                                                    }
+                                                                },
+                                                            contentScale = ContentScale.Crop,
+                                                        )
+                                                        if (uri in pendingGallerySelection) {
+                                                            Box(
+                                                                modifier = Modifier
+                                                                    .matchParentSize()
+                                                                    .background(Color.Black.copy(alpha = 0.3f))
+                                                                    .clip(RoundedCornerShape(4.dp)),
+                                                            ) {
+                                                                Icon(
+                                                                    imageVector = Icons.Rounded.CheckCircle,
+                                                                    contentDescription = "Selected",
+                                                                    modifier = Modifier
+                                                                        .align(Alignment.TopEnd)
+                                                                        .padding(3.dp)
+                                                                        .size(20.dp),
+                                                                    tint = MaterialTheme.colorScheme.primary,
+                                                                )
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    } else {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .heightIn(min = 100.dp),
+                                            contentAlignment = Alignment.Center,
+                                        ) {
+                                            Text(
+                                                text = "No recent photos",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        }
+                                    }
+                                    if (pendingGallerySelection.isNotEmpty()) {
+                                        Spacer(Modifier.height(4.dp))
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                                            horizontalArrangement = Arrangement.Center,
+                                        ) {
+                                            FilledTonalButton(
+                                                onClick = {
+                                                    onImageSelected(selectedImageUris + pendingGallerySelection.toList())
+                                                    showAttachmentMenu = false
+                                                },
+                                            ) {
+                                                Text(stringResource(R.string.attachment_gallery_add, pendingGallerySelection.size))
+                                            }
+                                        }
+                                    }
+                                    Spacer(Modifier.height(8.dp))
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -478,12 +671,17 @@ internal fun ConversationComposer(
     }
 }
 
+private enum class AttachmentTab { CAMERA, GALLERY }
+
 @Composable
 private fun AttachmentOption(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
+    selected: Boolean = false,
+    iconOnly: Boolean = false,
     onClick: () -> Unit,
 ) {
+    val tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
@@ -492,19 +690,155 @@ private fun AttachmentOption(
                 indication = null,
                 interactionSource = remember { MutableInteractionSource() },
             )
-            .padding(24.dp),
+            .padding(if (iconOnly) 10.dp else 24.dp),
     ) {
         Icon(
             imageVector = icon,
             contentDescription = label,
-            modifier = Modifier.size(40.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(if (iconOnly) 28.dp else 40.dp),
+            tint = tint,
         )
-        Spacer(modifier = Modifier.size(8.dp))
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        if (selected) {
+            Spacer(modifier = Modifier.height(3.dp))
+            Box(
+                modifier = Modifier
+                    .width(if (iconOnly) 18.dp else 24.dp)
+                    .height(2.dp)
+                    .clip(RoundedCornerShape(1.dp))
+                    .background(MaterialTheme.colorScheme.primary),
+            )
+        }
+        if (!iconOnly) {
+            Spacer(modifier = Modifier.size(8.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelLarge,
+                color = tint,
+            )
+        }
     }
+}
+
+@Composable
+private fun CameraPreviewContent(
+    onPhotoTaken: (Uri) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val context = LocalContext.current
+    val hasCameraPermission = remember {
+        ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+    }
+    var cameraPermissionGranted by remember { mutableStateOf(hasCameraPermission) }
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted -> cameraPermissionGranted = granted }
+    val cameraRef = remember { mutableStateOf<Camera?>(null) }
+
+    if (!cameraPermissionGranted) {
+        Column(
+            modifier = modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(
+                text = "Camera permission required",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(8.dp))
+            FilledTonalButton(
+                onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) },
+            ) {
+                Text("Grant permission")
+            }
+        }
+        return
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            cameraRef.value?.apply {
+                stopPreview()
+                release()
+            }
+            cameraRef.value = null
+        }
+    }
+
+    Column(modifier = modifier.fillMaxWidth()) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+        ) {
+            AndroidView(
+                factory = { ctx: android.content.Context ->
+                    val surfaceView = SurfaceView(ctx)
+                    surfaceView.holder.addCallback(object : SurfaceHolder.Callback {
+                        override fun surfaceCreated(holder: SurfaceHolder) {
+                            try {
+                                val camera = Camera.open()
+                                cameraRef.value = camera
+                                camera.setPreviewDisplay(holder)
+                                camera.setDisplayOrientation(90)
+                                camera.startPreview()
+                            } catch (e: Exception) {
+                                Log.e("CameraPreview", "Failed to open camera", e)
+                            }
+                        }
+                        override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {}
+                        override fun surfaceDestroyed(holder: SurfaceHolder) {
+                            cameraRef.value?.apply {
+                                stopPreview()
+                                release()
+                            }
+                            cameraRef.value = null
+                        }
+                    })
+                    surfaceView
+                },
+                modifier = Modifier.fillMaxSize(),
+            )
+            IconButton(
+                onClick = {
+                    val camera = cameraRef.value ?: return@IconButton
+                    try {
+                        camera.takePicture(null, null, object : Camera.PictureCallback {
+                            @Suppress("DEPRECATION")
+                            override fun onPictureTaken(data: ByteArray?, camera: Camera) {
+                                if (data != null) {
+                                    val file = createCameraImageFile(context)
+                                    file.writeBytes(data)
+                                    onPhotoTaken(Uri.fromFile(file))
+                                }
+                                camera.startPreview()
+                            }
+                        })
+                    } catch (e: Exception) {
+                        Log.e("CameraPreview", "Failed to take picture", e)
+                    }
+                },
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 16.dp)
+                    .size(56.dp)
+                    .clip(CircleShape)
+                    .background(Color.White.copy(alpha = 0.85f)),
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.CameraAlt,
+                    contentDescription = "Take photo",
+                    modifier = Modifier.size(28.dp),
+                    tint = Color.Black,
+                )
+            }
+        }
+    }
+}
+
+private fun createCameraImageFile(context: android.content.Context): java.io.File {
+    val timeStamp = java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US).format(java.util.Date())
+    val imageDir = java.io.File(context.cacheDir, "camera_photos")
+    imageDir.mkdirs()
+    return java.io.File(imageDir, "MMS_$timeStamp.jpg")
 }

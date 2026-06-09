@@ -83,6 +83,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -107,6 +108,7 @@ import com.skeler.pulse.design.util.rememberEntranceModifier
 import com.skeler.pulse.design.util.rememberReducedMotionEnabled
 import com.skeler.pulse.design.util.rememberSmoothFlingBehavior
 import com.skeler.pulse.sms.SmsThread
+import coil.compose.AsyncImage
 
 
 
@@ -246,18 +248,29 @@ internal fun SmsThreadCard(
                             overflow = TextOverflow.Ellipsis,
                         )
                     }
-                    Text(
-                        text = thread.snippet,
-                        style = if (hasUnread) {
-                            MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium)
-                        } else {
-                            MaterialTheme.typography.bodyMedium
-                        },
-                        color = if (hasUnread) MaterialTheme.colorScheme.onSecondaryContainer
-                        else MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    if (thread.lastMmsPartUri != null) {
+                        AsyncImage(
+                            model = thread.lastMmsPartUri,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(RoundedCornerShape(8.dp)),
+                            contentScale = ContentScale.Crop,
+                        )
+                    } else {
+                        Text(
+                            text = thread.snippet,
+                            style = if (hasUnread) {
+                                MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium)
+                            } else {
+                                MaterialTheme.typography.bodyMedium
+                            },
+                            color = if (hasUnread) MaterialTheme.colorScheme.onSecondaryContainer
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
                 Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     if (isPinned) {

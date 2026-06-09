@@ -69,7 +69,7 @@ internal fun RealConversationScreen(
     totalMessageCount: Int = 0,
     onBack: () -> Unit,
     onSubscriptionIdChange: (Int?) -> Unit,
-    onSend: (String, Uri?) -> Unit,
+    onSend: (String, List<Uri>) -> Unit,
     onRetrySend: () -> Unit,
     onClearSendState: () -> Unit,
     onDraftConsumed: () -> Unit,
@@ -90,16 +90,18 @@ internal fun RealConversationScreen(
     var draft by rememberSaveable(address) { mutableStateOf("") }
     var shouldShowDiscardDraftDialog by rememberSaveable(address) { mutableStateOf(false) }
     var previousMessageCount by remember(address) { mutableIntStateOf(0) }
-    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+    var selectedImageUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
     val imagePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent(),
-    ) { uri -> selectedImageUri = uri }
+        contract = ActivityResultContracts.GetMultipleContents(),
+    ) { uris -> selectedImageUris = selectedImageUris + uris }
     val cameraImageUri = remember { mutableStateOf<Uri?>(null) }
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture(),
     ) { success ->
-        if (!success) cameraImageUri.value = null
-        selectedImageUri = cameraImageUri.value
+        if (success && cameraImageUri.value != null) {
+            selectedImageUris = selectedImageUris + cameraImageUri.value!!
+        }
+        cameraImageUri.value = null
     }
     val fallbackSimSlotLabel = stringResource(R.string.conversation_sim_default_slot)
     val fallbackSimCarrierLabel = stringResource(R.string.conversation_sim_default_carrier)
@@ -343,8 +345,8 @@ internal fun RealConversationScreen(
                         onClearSendState()
                     }
                 },
-                selectedImageUri = selectedImageUri,
-                onImageSelected = { selectedImageUri = it },
+                selectedImageUris = selectedImageUris,
+                onImageSelected = { selectedImageUris = it },
                 onImagePickFromGallery = {
                     imagePickerLauncher.launch("image/*")
                 },
@@ -360,11 +362,11 @@ internal fun RealConversationScreen(
                 },
                 onSend = {
                     val message = draft.trim()
-                    if (message.isEmpty() && selectedImageUri == null) return@ConversationBottomBar
+                    if (message.isEmpty() && selectedImageUris.isEmpty()) return@ConversationBottomBar
                     focusManager.clearFocus()
                     keyboardController?.hide()
-                    onSend(message, selectedImageUri)
-                    selectedImageUri = null
+                    onSend(message, selectedImageUris)
+                    selectedImageUris = emptyList()
                 },
             )
         },

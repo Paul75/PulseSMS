@@ -179,11 +179,13 @@ class SystemSmsReader(
                         } catch (e: SecurityException) {
                             "Unknown"
                         }
+                        val partUri = MmsPartResolver.resolveFirstAttachmentUri(context, mmsId)
                         MutableThreadAccumulator(
                             threadId = providerThreadId,
                             address = addr.normalizeAddressForDisplay(),
                             snippet = context.getString(R.string.mms_body_placeholder),
                             date = dateMs,
+                            lastMmsPartUri = partUri,
                         )
                     }
                     accumulator.messageCount += 1
@@ -192,6 +194,7 @@ class SystemSmsReader(
                     if (dateMs > accumulator.date) {
                         accumulator.date = dateMs
                         accumulator.snippet = context.getString(R.string.mms_body_placeholder)
+                        accumulator.lastMmsPartUri = MmsPartResolver.resolveFirstAttachmentUri(context, mmsId)
                     }
                 }
             }
@@ -212,6 +215,7 @@ class SystemSmsReader(
                     date = latest.date,
                     messageCount = group.sumOf { it.messageCount },
                     unreadCount = group.sumOf { it.unreadCount },
+                    lastMmsPartUri = latest.lastMmsPartUri,
                 )
             }
             .sortedByDescending { it.date }
@@ -593,8 +597,8 @@ class SystemSmsReader(
     suspend fun sendSms(address: String, body: String, subscriptionId: Int? = null) =
         smsSender.sendSms(address = address, body = body, subscriptionId = subscriptionId)
 
-    suspend fun sendMms(address: String, text: String, imageUri: Uri? = null) =
-        smsSender.sendMms(address = address, text = text, imageUri = imageUri)
+    suspend fun sendMms(address: String, text: String, imageUris: List<Uri> = emptyList()) =
+        smsSender.sendMms(address = address, text = text, imageUris = imageUris)
 
     fun countConversationMessages(address: String, threadId: Long?): Int {
         val normalized = address.normalizeAddressForDisplay()

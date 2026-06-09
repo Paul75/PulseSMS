@@ -25,7 +25,7 @@ import kotlinx.coroutines.launch
 private data class PendingSendRequest(
     val address: String,
     val body: String,
-    val imageUri: Uri? = null,
+    val imageUris: List<Uri> = emptyList(),
     val subscriptionId: Int?,
 )
 
@@ -275,14 +275,14 @@ class RealSmsViewModel(
         }
     }
 
-    fun sendMessage(address: String, body: String, imageUri: Uri? = null, subscriptionId: Int? = null) {
+    fun sendMessage(address: String, body: String, imageUris: List<Uri> = emptyList(), subscriptionId: Int? = null) {
         val trimmedBody = body.trim()
-        if (trimmedBody.isBlank() && imageUri == null) return
+        if (trimmedBody.isBlank() && imageUris.isEmpty()) return
 
         val request = PendingSendRequest(
             address = address,
             body = trimmedBody,
-            imageUri = imageUri,
+            imageUris = imageUris,
             subscriptionId = subscriptionId,
         )
         lastSendRequest = request
@@ -292,8 +292,10 @@ class RealSmsViewModel(
         _sendState.value = SendState.Sending(trimmedBody)
         sendJob = viewModelScope.launch {
             try {
-                if (imageUri != null) {
-                    smsReader.sendMms(address, trimmedBody, imageUri)
+                if (imageUris.isNotEmpty()) {
+                    imageUris.forEach { uri ->
+                        smsReader.sendMms(address, trimmedBody, listOf(uri))
+                    }
                 } else {
                     smsReader.sendSms(address, trimmedBody, subscriptionId)
                 }
@@ -322,7 +324,7 @@ class RealSmsViewModel(
         sendMessage(
             address = request.address,
             body = request.body,
-            imageUri = request.imageUri,
+            imageUris = request.imageUris,
             subscriptionId = request.subscriptionId,
         )
     }

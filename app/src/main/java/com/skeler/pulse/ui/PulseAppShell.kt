@@ -49,7 +49,7 @@ fun PulseAppShell(
     onRequestNewChat: () -> Unit = {},
     onRequestSmsPermissions: () -> Unit = {},
     onOpenConversation: (String, Long?) -> Unit,
-    onSendMessage: (String, String, AndroidUri?, Int?) -> Unit,
+    onSendMessage: (String, String, List<AndroidUri>, Int?) -> Unit,
     themeViewModel: SerafinaThemeViewModel,
     onRequestDefaultSms: () -> Unit = {},
     modifier: Modifier = Modifier,
@@ -254,8 +254,8 @@ fun PulseAppShell(
                             navigateBack()
                         },
                         onSubscriptionIdChange = { activeSubscriptionId = it },
-                        onSend = { body, imageUri ->
-                            onSendMessage(activeAddress, body, imageUri, activeSubscriptionId)
+                        onSend = { body, imageUris ->
+                            onSendMessage(activeAddress, body, imageUris, activeSubscriptionId)
                         },
                         onRetrySend = smsViewModel::retrySend,
                         onClearSendState = smsViewModel::clearSendState,

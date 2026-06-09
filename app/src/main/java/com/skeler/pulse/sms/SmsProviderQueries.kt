@@ -1,6 +1,7 @@
 package com.skeler.pulse.sms
 
 import android.database.Cursor
+import android.net.Uri
 import android.provider.Telephony
 import com.skeler.pulse.contact.normalizeAddressForDisplay
 
@@ -100,4 +101,5 @@ internal class MutableThreadAccumulator(
     var date: Long,
     var messageCount: Int = 0,
     var unreadCount: Int = 0,
+    var lastMmsPartUri: Uri? = null,
 )
