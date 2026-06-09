@@ -14,6 +14,7 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.RemoteInput
+import com.skeler.pulse.MainActivity
 import com.skeler.pulse.R
 
 object QuickComposeNotificationManager {
@@ -21,6 +22,7 @@ object QuickComposeNotificationManager {
     private const val NOTIFICATION_ID = 9001
     private const val REQUEST_CODE_CONTACT = 900101
     private const val REQUEST_CODE_SEND = 900102
+    private const val REQUEST_CODE_OPEN = 900103
     const val CHANNEL_ID = "quick_compose_channel"
     private const val PREFS_NAME = "quick_compose"
     private const val KEY_TARGET_NUMBER = "target_number"
@@ -102,10 +104,19 @@ object QuickComposeNotificationManager {
             .build()
 
         val contentText = "${context.getString(R.string.quick_compose_to_label)} $targetDisplay"
+        val openIntent = MainActivity.createLaunchIntent(
+            context = context,
+            conversationAddress = targetNumber,
+        )
+        val openPendingIntent = PendingIntent.getActivity(
+            context, REQUEST_CODE_OPEN, openIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle(context.getString(R.string.quick_compose_title))
             .setContentText(contentText)
+            .setContentIntent(openPendingIntent)
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
