@@ -270,7 +270,7 @@ internal class SystemSmsSender(
             "+33762776815",
             arrayOf(address),
             parts.toTypedArray(),
-            text.take(40),
+            text.take(40).ifBlank { null },
         )
         val pduBytes = messageInfo.bytes ?: return
 
