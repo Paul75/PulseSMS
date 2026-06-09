@@ -13,8 +13,9 @@ import android.provider.Telephony
 import android.telephony.SmsManager
 import android.util.Log
 import androidx.core.content.ContextCompat
+import com.klinker.android.send_message.Message
+import com.klinker.android.send_message.Settings
 import com.klinker.android.send_message.Transaction
-import com.google.android.mms.MMSPart
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
@@ -241,97 +242,22 @@ internal class SystemSmsSender(
                 context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
             }.getOrNull()?.takeIf { it.isNotEmpty() }
         }
-        val now = System.currentTimeMillis()
+        if (imageBytesList.isEmpty() && text.isBlank()) return
 
-        val parts = mutableListOf<MMSPart>()
-        if (text.isNotBlank()) {
-            parts.add(MMSPart().apply {
-                MimeType = "text/plain"
-                Name = "text.txt"
-                Data = text.toByteArray()
-            })
-        }
+        val message = if (text.isBlank()) null else text
+        val mmsMessage = Message(message, address)
+
+        mmsMessage.setFromAddress("+33762776815")
         imageBytesList.forEach { bytes ->
-            parts.add(MMSPart().apply {
-                MimeType = "image/jpeg"
-                Name = "image_${System.currentTimeMillis()}.jpg"
-                Data = bytes
-            })
+            mmsMessage.addMedia(bytes, "image/jpeg", "image_${System.currentTimeMillis()}.jpg")
         }
 
-        val messageInfo = Transaction.getBytes(
-            context,
-            false,
-            "+33762776815",
-            arrayOf(address),
-            parts.toTypedArray(),
-            text.take(40).ifBlank { null },
-        )
-        val pduBytes = messageInfo.bytes ?: return
-
-        val mmsUri = insertMmsRecord(threadId, address, text, imageBytesList, pduBytes.size, now)
-        val sentIntent = PendingIntent.getBroadcast(
-            context,
-            (now % Int.MAX_VALUE).toInt(),
-            Intent("com.skeler.pulse.mms.SENT").setPackage(context.packageName),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-        )
-        SmsManager.getDefault().sendMultimediaMessage(context, mmsUri, null, null, sentIntent)
+        val settings = Settings().apply {
+            setUseSystemSending(false)
+        }
+        val transaction = Transaction(context, settings)
+        transaction.sendNewMessage(mmsMessage, threadId)
         context.contentResolver.notifyChange(Telephony.Mms.CONTENT_URI, null)
-    }
-
-    private fun insertMmsRecord(
-        threadId: Long, address: String, text: String, imageBytesList: List<ByteArray>, pduSize: Int, now: Long,
-    ): Uri? {
-        val mmsValues = ContentValues().apply {
-            put("thread_id", threadId)
-            put("date", now / 1000L)
-            put("msg_box", Telephony.Mms.MESSAGE_BOX_OUTBOX)
-            put("read", 1)
-            put("sub", text.take(40).ifBlank { null })
-            put("sub_cs", 106)
-            put("ct_t", "application/vnd.wap.multipart.related")
-            put("exp", pduSize)
-            put("m_cls", "personal")
-            put("m_type", 128)
-            put("v", 18)
-            put("pri", 129)
-            put("tr_id", "T${now.toString(16)}")
-            put("resp_st", 128)
-        }
-        val mmsUri = contentResolver.insert(Telephony.Mms.CONTENT_URI, mmsValues) ?: return null
-        val mmsId = mmsUri.lastPathSegment ?: return null
-
-        if (text.isNotBlank()) {
-            contentResolver.insert(Uri.parse("content://mms/$mmsId/part"), ContentValues().apply {
-                put("mid", mmsId)
-                put("ct", "text/plain")
-                put("text", text)
-            })
-        }
-        imageBytesList.forEach { bytes ->
-            val partUri = Uri.parse("content://mms/$mmsId/part")
-            val insertedPart = contentResolver.insert(partUri, ContentValues().apply {
-                put("mid", mmsId)
-                put("ct", "image/jpeg")
-                put("cid", "<${System.currentTimeMillis()}>")
-                put("fn", "image_${System.currentTimeMillis()}.jpg")
-            })
-            if (insertedPart != null) {
-                contentResolver.openOutputStream(insertedPart)?.use { it.write(bytes) }
-            }
-        }
-        contentResolver.insert(Uri.parse("content://mms/$mmsId/addr"), ContentValues().apply {
-            put("address", "+33762776815")
-            put("charset", 106)
-            put("type", 137)
-        })
-        contentResolver.insert(Uri.parse("content://mms/$mmsId/addr"), ContentValues().apply {
-            put("address", address)
-            put("charset", 106)
-            put("type", 151)
-        })
-        return mmsUri
     }
 
     private fun deliveryCallbackToken(address: String, messageUri: Uri?): String =
