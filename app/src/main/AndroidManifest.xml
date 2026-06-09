@@ -117,11 +117,11 @@
             </intent-filter>
         </service>
 
-        <!-- FileProvider — serves MMS images from our cache dir (bypasses MMS provider's openFile) -->
+        <!-- FileProvider — serves MMS PDU/images (must be exported=true for system MmsService access) -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.mmsfileprovider"
-            android:exported="false"
+            android:exported="true"
             android:grantUriPermissions="true">
             <meta-data
                 android:name="android.support.FILE_PROVIDER_PATHS"
