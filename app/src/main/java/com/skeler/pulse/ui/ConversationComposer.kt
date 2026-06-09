@@ -1,5 +1,3 @@
-@file:Suppress("DEPRECATION")
-
 package com.skeler.pulse.ui
 
 import android.Manifest
@@ -14,9 +12,13 @@ import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import android.hardware.Camera
-import android.view.SurfaceHolder
-import android.view.SurfaceView
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageCapture
+import androidx.camera.core.ImageCaptureException
+import androidx.camera.core.Preview
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.view.PreviewView
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -725,6 +727,7 @@ private fun CameraPreviewContent(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     val hasCameraPermission = remember {
         ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
     }
@@ -732,7 +735,6 @@ private fun CameraPreviewContent(
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { granted -> cameraPermissionGranted = granted }
-    val cameraRef = remember { mutableStateOf<Camera?>(null) }
 
     if (!cameraPermissionGranted) {
         Column(
@@ -755,15 +757,7 @@ private fun CameraPreviewContent(
         return
     }
 
-    DisposableEffect(Unit) {
-        onDispose {
-            cameraRef.value?.apply {
-                stopPreview()
-                release()
-            }
-            cameraRef.value = null
-        }
-    }
+    var imageCapture by remember { mutableStateOf<ImageCapture?>(null) }
 
     Column(modifier = modifier.fillMaxWidth()) {
         Box(
@@ -772,52 +766,48 @@ private fun CameraPreviewContent(
                 .weight(1f),
         ) {
             AndroidView(
-                factory = { ctx: android.content.Context ->
-                    val surfaceView = SurfaceView(ctx)
-                    surfaceView.holder.addCallback(object : SurfaceHolder.Callback {
-                        override fun surfaceCreated(holder: SurfaceHolder) {
-                            try {
-                                val camera = Camera.open()
-                                cameraRef.value = camera
-                                camera.setPreviewDisplay(holder)
-                                camera.setDisplayOrientation(90)
-                                camera.startPreview()
-                            } catch (e: Exception) {
-                                Log.e("CameraPreview", "Failed to open camera", e)
-                            }
-                        }
-                        override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {}
-                        override fun surfaceDestroyed(holder: SurfaceHolder) {
-                            cameraRef.value?.apply {
-                                stopPreview()
-                                release()
-                            }
-                            cameraRef.value = null
-                        }
-                    })
-                    surfaceView
+                factory = { ctx ->
+                    val previewView = PreviewView(ctx)
+                    val cameraProvider = ProcessCameraProvider.getInstance(ctx).get()
+
+                    val preview = Preview.Builder().build().also {
+                        it.surfaceProvider = previewView.surfaceProvider
+                    }
+
+                    val capture = ImageCapture.Builder()
+                        .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
+                        .build()
+                    imageCapture = capture
+
+                    cameraProvider.unbindAll()
+                    cameraProvider.bindToLifecycle(
+                        lifecycleOwner,
+                        CameraSelector.DEFAULT_BACK_CAMERA,
+                        preview,
+                        capture,
+                    )
+
+                    previewView
                 },
                 modifier = Modifier.fillMaxSize(),
             )
             IconButton(
                 onClick = {
-                    val camera = cameraRef.value ?: return@IconButton
-                    try {
-                        camera.takePicture(null, null, object : Camera.PictureCallback {
-                            @Deprecated("Camera.PictureCallback is deprecated")
-                            @Suppress("DEPRECATION")
-                            override fun onPictureTaken(data: ByteArray?, camera: Camera) {
-                                if (data != null) {
-                                    val file = createCameraImageFile(context)
-                                    file.writeBytes(data)
-                                    onPhotoTaken(Uri.fromFile(file))
-                                }
-                                camera.startPreview()
+                    val capture = imageCapture ?: return@IconButton
+                    val photoFile = createCameraImageFile(context)
+                    val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
+                    capture.takePicture(
+                        outputOptions,
+                        ContextCompat.getMainExecutor(context),
+                        object : ImageCapture.OnImageSavedCallback {
+                            override fun onImageSaved(output: ImageCapture.OutputFileResults) {
+                                onPhotoTaken(Uri.fromFile(photoFile))
                             }
-                        })
-                    } catch (e: Exception) {
-                        Log.e("CameraPreview", "Failed to take picture", e)
-                    }
+                            override fun onError(exception: ImageCaptureException) {
+                                Log.e("CameraPreview", "Photo capture failed", exception)
+                            }
+                        },
+                    )
                 },
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
