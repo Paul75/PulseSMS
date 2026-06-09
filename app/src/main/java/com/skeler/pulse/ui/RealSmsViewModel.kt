@@ -1,5 +1,6 @@
 package com.skeler.pulse.ui
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.skeler.pulse.InboxAccessState
@@ -24,6 +25,7 @@ import kotlinx.coroutines.launch
 private data class PendingSendRequest(
     val address: String,
     val body: String,
+    val imageUri: Uri? = null,
     val subscriptionId: Int?,
 )
 
@@ -271,14 +273,15 @@ class RealSmsViewModel(
         }
     }
 
-    fun sendMessage(address: String, body: String, subscriptionId: Int? = null) {
+    fun sendMessage(address: String, body: String, imageUri: Uri? = null, subscriptionId: Int? = null) {
         val trimmedBody = body.trim()
-        if (trimmedBody.isBlank()) return
+        if (trimmedBody.isBlank() && imageUri == null) return
         if (!shouldStartSmsSend(_sendState.value)) return
 
         val request = PendingSendRequest(
             address = address,
             body = trimmedBody,
+            imageUri = imageUri,
             subscriptionId = subscriptionId,
         )
         lastSendRequest = request
@@ -287,7 +290,11 @@ class RealSmsViewModel(
         sendJob?.cancel()
         sendJob = viewModelScope.launch {
             try {
-                smsReader.sendSms(address, trimmedBody, subscriptionId)
+                if (imageUri != null) {
+                    smsReader.sendMms(address, trimmedBody, imageUri)
+                } else {
+                    smsReader.sendSms(address, trimmedBody, subscriptionId)
+                }
                 _sendState.value = SendState.Sent(trimmedBody)
             } catch (exception: CancellationException) {
                 throw exception
@@ -303,6 +310,7 @@ class RealSmsViewModel(
         sendMessage(
             address = request.address,
             body = request.body,
+            imageUri = request.imageUri,
             subscriptionId = request.subscriptionId,
         )
     }

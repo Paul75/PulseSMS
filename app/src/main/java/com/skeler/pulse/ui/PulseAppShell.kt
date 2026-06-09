@@ -3,7 +3,7 @@ package com.skeler.pulse.ui
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
+import android.net.Uri as AndroidUri
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.core.app.NotificationManagerCompat
@@ -49,7 +49,7 @@ fun PulseAppShell(
     onRequestNewChat: () -> Unit = {},
     onRequestSmsPermissions: () -> Unit = {},
     onOpenConversation: (String, Long?) -> Unit,
-    onSendMessage: (String, String, Int?) -> Unit,
+    onSendMessage: (String, String, AndroidUri?, Int?) -> Unit,
     themeViewModel: SerafinaThemeViewModel,
     onRequestDefaultSms: () -> Unit = {},
     modifier: Modifier = Modifier,
@@ -254,8 +254,8 @@ fun PulseAppShell(
                             navigateBack()
                         },
                         onSubscriptionIdChange = { activeSubscriptionId = it },
-                        onSend = { body ->
-                            onSendMessage(activeAddress, body, activeSubscriptionId)
+                        onSend = { body, imageUri ->
+                            onSendMessage(activeAddress, body, imageUri, activeSubscriptionId)
                         },
                         onRetrySend = smsViewModel::retrySend,
                         onClearSendState = smsViewModel::clearSendState,
@@ -374,7 +374,7 @@ fun PulseAppShell(
 
 private fun openDialer(context: Context, address: String) {
     val dialableNumber = address.toDialablePhoneNumberOrNull() ?: return
-    val dialIntent = Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", dialableNumber, null))
+    val dialIntent = Intent(Intent.ACTION_DIAL, AndroidUri.fromParts("tel", dialableNumber, null))
     try {
         context.startActivity(dialIntent)
     } catch (exception: ActivityNotFoundException) {

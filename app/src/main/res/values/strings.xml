@@ -31,7 +31,8 @@
     <string name="conversation_composer_placeholder">Message</string>
     <string name="conversation_send_message_content_description">Send message</string>
     <string name="conversation_attach_content_description">Attach file</string>
-    <string name="conversation_attachment_unavailable">Coming soon</string>
+    <string name="attachment_gallery">Gallery</string>
+    <string name="attachment_camera">Camera</string>
     <string name="conversation_send_status_sending_title">Sending message</string>
     <string name="conversation_send_status_sent_title">Message sent</string>
     <string name="conversation_send_status_failed_title">Send failed</string>

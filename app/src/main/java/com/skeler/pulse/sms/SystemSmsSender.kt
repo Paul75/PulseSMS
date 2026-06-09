@@ -8,10 +8,14 @@ import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.provider.Telephony
 import android.telephony.SmsManager
 import androidx.core.content.ContextCompat
+import com.klinker.android.send_message.Message
+import com.klinker.android.send_message.Settings
+import com.klinker.android.send_message.Transaction
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
@@ -197,6 +201,20 @@ internal class SystemSmsSender(
                 }
             }
         }
+    }
+
+    suspend fun sendMms(address: String, text: String, imageUri: Uri?) = withContext(ioDispatcher) {
+        val threadId = Telephony.Threads.getOrCreateThreadId(context, address)
+        val bitmap = imageUri?.let {
+            runCatching {
+                context.contentResolver.openInputStream(it)?.use { stream ->
+                    BitmapFactory.decodeStream(stream)
+                }
+            }.getOrNull()
+        }
+        val message = if (bitmap != null) Message(text, address, bitmap) else Message(text, address)
+        val settings = Settings().apply { setUseSystemSending(true) }
+        Transaction(context, settings).sendNewMessage(message, threadId)
     }
 
     private fun deliveryCallbackToken(address: String, messageUri: Uri?): String =

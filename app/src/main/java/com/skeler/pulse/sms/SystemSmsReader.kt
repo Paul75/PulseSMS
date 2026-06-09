@@ -4,9 +4,11 @@ import android.content.ContentResolver
 import android.content.ContentValues
 import android.content.Context
 import android.database.ContentObserver
+import android.database.Cursor
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
+import android.provider.BaseColumns
 import android.provider.Telephony
 import android.util.Log
 import com.skeler.pulse.R
@@ -585,6 +587,9 @@ class SystemSmsReader(
 
     suspend fun sendSms(address: String, body: String, subscriptionId: Int? = null) =
         smsSender.sendSms(address = address, body = body, subscriptionId = subscriptionId)
+
+    suspend fun sendMms(address: String, text: String, imageUri: Uri? = null) =
+        smsSender.sendMms(address = address, text = text, imageUri = imageUri)
 
     fun countConversationMessages(address: String, threadId: Long?): Int {
         val normalized = address.normalizeAddressForDisplay()

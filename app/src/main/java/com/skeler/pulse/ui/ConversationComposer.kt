@@ -1,8 +1,8 @@
 package com.skeler.pulse.ui
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.net.Uri
 import android.provider.Telephony
-import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -56,6 +56,9 @@ import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material.icons.outlined.Sms
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.ArrowBackIosNew
+import androidx.compose.material.icons.rounded.CameraAlt
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Photo
 import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.ContentCopy
@@ -73,6 +76,8 @@ import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -96,6 +101,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -125,6 +131,7 @@ import com.skeler.pulse.design.util.rememberReducedMotionEnabled
 import com.skeler.pulse.design.util.rememberSmoothFlingBehavior
 import com.skeler.pulse.design.util.scrollToItemSmoothly
 import com.skeler.pulse.sms.OtpCodeExtractor
+import coil.compose.AsyncImage
 import com.skeler.pulse.sms.SystemSms
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -132,21 +139,26 @@ import kotlinx.coroutines.withContext
 import java.time.Instant
 
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun ConversationComposer(
     draft: String,
     sendState: SendState,
     simOptions: List<NewChatSimOption>,
     selectedSimKey: String?,
+    selectedImageUri: Uri? = null,
     onSimOptionClick: (NewChatSimOption) -> Unit,
     onDraftChange: (String) -> Unit,
     onSend: () -> Unit,
+    onImageSelected: (Uri?) -> Unit = {},
+    onImagePickFromGallery: () -> Unit = {},
+    onTakePhoto: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val reducedMotion = rememberReducedMotionEnabled()
     val isSending = sendState is SendState.Sending
-    val canSend by remember(draft, isSending) {
-        derivedStateOf { draft.isNotBlank() && !isSending }
+    val canSend by remember(draft, isSending, selectedImageUri) {
+        derivedStateOf { (draft.isNotBlank() || selectedImageUri != null) && !isSending }
     }
     val selectedSim = remember(simOptions, selectedSimKey) {
         simOptions.firstOrNull { option -> option.key == selectedSimKey } ?: simOptions.firstOrNull()
@@ -260,15 +272,14 @@ internal fun ConversationComposer(
                 )
             }
         }
+        var showAttachmentMenu by remember { mutableStateOf(false) }
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(ConversationComposerTokens.contentSpacing),
             verticalAlignment = Alignment.Bottom,
         ) {
             IconButton(
-                onClick = {
-                    Toast.makeText(context, R.string.conversation_attachment_unavailable, Toast.LENGTH_SHORT).show()
-                },
+                onClick = { showAttachmentMenu = true },
                 enabled = !isSending,
                 modifier = Modifier
                     .size(ConversationComposerTokens.attachmentButtonSize),
@@ -279,6 +290,33 @@ internal fun ConversationComposer(
                     modifier = Modifier.size(ConversationComposerTokens.attachmentIconSize),
                     tint = colors.onSurfaceVariant.copy(alpha = ConversationComposerTokens.inactiveAlpha),
                 )
+            }
+            if (selectedImageUri != null) {
+                Box(
+                    modifier = Modifier
+                        .size(ConversationComposerTokens.attachmentButtonSize)
+                        .clip(RoundedCornerShape(12.dp)),
+                ) {
+                    AsyncImage(
+                        model = selectedImageUri,
+                        contentDescription = stringResource(R.string.conversation_attach_content_description),
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop,
+                    )
+                    IconButton(
+                        onClick = { onImageSelected(null) },
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .size(20.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Close,
+                            contentDescription = "Remove",
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+                }
             }
             Row(
                 modifier = Modifier
@@ -397,5 +435,71 @@ internal fun ConversationComposer(
                 }
             }
         }
+        if (showAttachmentMenu) {
+            ModalBottomSheet(
+                onDismissRequest = { showAttachmentMenu = false },
+                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                    ) {
+                        AttachmentOption(
+                            icon = Icons.Rounded.Photo,
+                            label = stringResource(R.string.attachment_gallery),
+                            onClick = {
+                                showAttachmentMenu = false
+                                onImagePickFromGallery()
+                            },
+                        )
+                        AttachmentOption(
+                            icon = Icons.Rounded.CameraAlt,
+                            label = stringResource(R.string.attachment_camera),
+                            onClick = {
+                                showAttachmentMenu = false
+                                onTakePhoto()
+                            },
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AttachmentOption(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    onClick: () -> Unit,
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .combinedClickable(
+                onClick = onClick,
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() },
+            )
+            .padding(24.dp),
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            modifier = Modifier.size(40.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(modifier = Modifier.size(8.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }

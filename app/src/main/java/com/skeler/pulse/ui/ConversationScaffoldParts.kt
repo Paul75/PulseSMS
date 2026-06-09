@@ -1,5 +1,6 @@
 package com.skeler.pulse.ui
 
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -201,10 +202,14 @@ internal fun ConversationBottomBar(
     sendState: SendState,
     simOptions: List<NewChatSimOption>,
     selectedSimKey: String?,
+    selectedImageUri: Uri?,
     onRetrySend: () -> Unit,
     onSimOptionClick: (NewChatSimOption) -> Unit,
     onDraftChange: (String) -> Unit,
     onSend: () -> Unit,
+    onImageSelected: (Uri?) -> Unit = {},
+    onImagePickFromGallery: () -> Unit = {},
+    onTakePhoto: () -> Unit = {},
 ) {
     if (isReplyable) {
         Column(
@@ -226,9 +231,13 @@ internal fun ConversationBottomBar(
                 sendState = sendState,
                 simOptions = simOptions,
                 selectedSimKey = selectedSimKey,
+                selectedImageUri = selectedImageUri,
                 onSimOptionClick = onSimOptionClick,
                 onDraftChange = onDraftChange,
                 onSend = onSend,
+                onImageSelected = onImageSelected,
+                onImagePickFromGallery = onImagePickFromGallery,
+                onTakePhoto = onTakePhoto,
             )
         }
     } else {

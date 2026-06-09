@@ -2,7 +2,10 @@ package com.skeler.pulse.ui
 
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.net.Uri
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -66,7 +69,7 @@ internal fun RealConversationScreen(
     totalMessageCount: Int = 0,
     onBack: () -> Unit,
     onSubscriptionIdChange: (Int?) -> Unit,
-    onSend: (String) -> Unit,
+    onSend: (String, Uri?) -> Unit,
     onRetrySend: () -> Unit,
     onClearSendState: () -> Unit,
     onDraftConsumed: () -> Unit,
@@ -87,6 +90,17 @@ internal fun RealConversationScreen(
     var draft by rememberSaveable(address) { mutableStateOf("") }
     var shouldShowDiscardDraftDialog by rememberSaveable(address) { mutableStateOf(false) }
     var previousMessageCount by remember(address) { mutableIntStateOf(0) }
+    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+    ) { uri -> selectedImageUri = uri }
+    val cameraImageUri = remember { mutableStateOf<Uri?>(null) }
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture(),
+    ) { success ->
+        if (!success) cameraImageUri.value = null
+        selectedImageUri = cameraImageUri.value
+    }
     val fallbackSimSlotLabel = stringResource(R.string.conversation_sim_default_slot)
     val fallbackSimCarrierLabel = stringResource(R.string.conversation_sim_default_carrier)
     val fallbackSimOption = remember(fallbackSimSlotLabel, fallbackSimCarrierLabel) {
@@ -329,12 +343,28 @@ internal fun RealConversationScreen(
                         onClearSendState()
                     }
                 },
+                selectedImageUri = selectedImageUri,
+                onImageSelected = { selectedImageUri = it },
+                onImagePickFromGallery = {
+                    imagePickerLauncher.launch("image/*")
+                },
+                onTakePhoto = {
+                    val photoFile = createImageFile(context)
+                    val photoUri = androidx.core.content.FileProvider.getUriForFile(
+                        context,
+                        "${context.packageName}.mmsfileprovider",
+                        photoFile,
+                    )
+                    cameraImageUri.value = photoUri
+                    cameraLauncher.launch(photoUri)
+                },
                 onSend = {
                     val message = draft.trim()
-                    if (message.isEmpty()) return@ConversationBottomBar
+                    if (message.isEmpty() && selectedImageUri == null) return@ConversationBottomBar
                     focusManager.clearFocus()
                     keyboardController?.hide()
-                    onSend(message)
+                    onSend(message, selectedImageUri)
+                    selectedImageUri = null
                 },
             )
         },
@@ -397,4 +427,11 @@ internal fun RealConversationScreen(
         message = infoSheetMessage,
         onDismiss = { infoSheetMessage = null },
     )
+}
+
+private fun createImageFile(context: android.content.Context): java.io.File {
+    val timeStamp = java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US).format(java.util.Date())
+    val imageDir = java.io.File(context.cacheDir, "camera_photos")
+    imageDir.mkdirs()
+    return java.io.File(imageDir, "MMS_$timeStamp.jpg")
 }
