@@ -3,6 +3,8 @@ package com.skeler.pulse.sms
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.telephony.PhoneNumberUtils
+import android.telephony.TelephonyManager
 import android.util.Log
 import android.widget.Toast
 import androidx.core.app.RemoteInput
@@ -27,7 +29,7 @@ class QuickComposeReceiver : BroadcastReceiver() {
             ?.toString()?.trim() ?: return
         if (raw.isBlank()) return
 
-        val normalized = normalizePhoneNumber(raw)
+        val normalized = normalizePhoneNumber(context, raw)
         if (normalized == null) {
             Toast.makeText(context, R.string.quick_compose_invalid_contact_toast, Toast.LENGTH_SHORT).show()
             return
@@ -52,7 +54,7 @@ class QuickComposeReceiver : BroadcastReceiver() {
             Toast.makeText(context, R.string.quick_compose_no_contact_toast, Toast.LENGTH_SHORT).show()
             return
         }
-        if (normalizePhoneNumber(address) == null) {
+        if (normalizePhoneNumber(context, address) == null) {
             Log.w(TAG, "Stored address is invalid, ignoring")
             Toast.makeText(context, R.string.quick_compose_invalid_contact_toast, Toast.LENGTH_SHORT).show()
             return
@@ -79,13 +81,28 @@ class QuickComposeReceiver : BroadcastReceiver() {
         }
     }
 
-    private fun normalizePhoneNumber(raw: String): String? {
+    private fun normalizePhoneNumber(context: Context, raw: String): String? {
         val cleaned = raw.replace(Regex("[^\\d+]"), "")
         val digits = cleaned.count { it.isDigit() }
         if (digits < 8) return null
         if (cleaned.count { it == '+' } > 1) return null
-        if (cleaned.startsWith("+") && cleaned.length < 8) return null
-        return cleaned
+
+        if (cleaned.startsWith("+")) return cleaned
+
+        val country = try {
+            val tm = context.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager
+            tm?.simCountryIso?.uppercase()
+                ?: tm?.networkCountryIso?.uppercase()
+                ?: java.util.Locale.getDefault().country.uppercase()
+        } catch (e: Exception) {
+            java.util.Locale.getDefault().country.uppercase()
+        }
+
+        return try {
+            PhoneNumberUtils.formatNumberToE164(cleaned, country) ?: cleaned
+        } catch (e: Exception) {
+            cleaned
+        }
     }
 
     companion object {

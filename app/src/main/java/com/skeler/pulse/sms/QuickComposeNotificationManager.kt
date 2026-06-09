@@ -8,6 +8,8 @@ import android.content.Intent
 import android.database.Cursor
 import android.os.Build
 import android.provider.Telephony
+import android.telephony.PhoneNumberUtils
+import android.telephony.TelephonyManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -41,8 +43,20 @@ object QuickComposeNotificationManager {
 
     fun show(context: Context) {
         if (getTargetNumber(context) == null) {
-            val lastContacted = getLastContactedNumber(context)
+            var lastContacted = getLastContactedNumber(context)
             if (lastContacted != null) {
+                if (!lastContacted.startsWith("+")) {
+                    try {
+                        val country = (
+                            (context.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager)
+                                ?.simCountryIso?.uppercase()
+                                ?: (context.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager)
+                                    ?.networkCountryIso?.uppercase()
+                                ?: java.util.Locale.getDefault().country.uppercase()
+                        )
+                        PhoneNumberUtils.formatNumberToE164(lastContacted, country)?.let { lastContacted = it }
+                    } catch (_: Exception) { }
+                }
                 setTargetNumber(context, lastContacted)
             }
         }
