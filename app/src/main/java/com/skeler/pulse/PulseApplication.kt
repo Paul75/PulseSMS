@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.IntentFilter
 import android.os.Build
 import android.provider.Telephony
+import android.util.Log
 import androidx.core.content.ContextCompat
 import com.skeler.pulse.sms.NotificationPreferences
 import com.skeler.pulse.sms.QuickComposeNotificationManager
@@ -11,10 +12,17 @@ import com.skeler.pulse.sms.SmsNotificationHelper
 import com.skeler.pulse.sms.SmsProcessingHelper
 import com.skeler.pulse.sms.SmsReceiver
 import com.skeler.pulse.sync.worker.SyncWorkerDependenciesHolder
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class PulseApplication : Application() {
     lateinit var appContainer: AppContainer
         private set
+
+    companion object {
+        private const val TAG = "PulseApplication"
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -25,9 +33,13 @@ class PulseApplication : Application() {
         SmsNotificationHelper.createNotificationChannel(this)
         QuickComposeNotificationManager.createChannel(this)
 
-        kotlinx.coroutines.runBlocking {
-            if (NotificationPreferences(this@PulseApplication).isQuickComposeEnabled()) {
-                QuickComposeNotificationManager.show(this@PulseApplication)
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                if (NotificationPreferences(this@PulseApplication).isQuickComposeEnabled()) {
+                    QuickComposeNotificationManager.show(this@PulseApplication)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to show quick compose notification", e)
             }
         }
 
