@@ -33,7 +33,7 @@ internal class SystemSmsSender(
     private val contentResolver: ContentResolver get() = context.contentResolver
 
     @Suppress("DEPRECATION")
-    suspend fun sendSms(address: String, body: String, subscriptionId: Int? = null) = withContext(ioDispatcher) {
+    suspend fun sendSms(address: String, body: String, subscriptionId: Int? = null, waitForDelivery: Boolean = false) = withContext(ioDispatcher) {
         val smsManager = if (subscriptionId != null) {
             SmsManager.getSmsManagerForSubscriptionId(subscriptionId)
         } else {
@@ -48,7 +48,9 @@ internal class SystemSmsSender(
                 smsManager.sendMultipartTextMessage(address, null, parts, sentIntents, deliveryIntents)
             }
             updateOutgoingMessage(messageUri, Telephony.Sms.MESSAGE_TYPE_SENT)
-            awaitDeliveryCallbacks(parts, messageUri, token)
+            if (waitForDelivery) {
+                awaitDeliveryCallbacks(parts, messageUri, token)
+            }
         } catch (exception: Exception) {
             updateOutgoingMessage(messageUri, Telephony.Sms.MESSAGE_TYPE_FAILED)
             throw exception
@@ -200,6 +202,21 @@ internal class SystemSmsSender(
                     }
                 }
             }
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    suspend fun sendSmsFireAndForget(address: String, body: String) = withContext(ioDispatcher) {
+        val smsManager = SmsManager.getDefault()
+        val messageUri = insertOutgoingMessage(address, body, Telephony.Sms.MESSAGE_TYPE_SENT)
+        try {
+            val parts = smsManager.divideMessage(body)
+            smsManager.sendMultipartTextMessage(address, null, parts, null, null)
+        } catch (e: Exception) {
+            if (messageUri != null) {
+                updateOutgoingMessage(messageUri, Telephony.Sms.MESSAGE_TYPE_FAILED)
+            }
+            throw e
         }
     }
 

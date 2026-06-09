@@ -56,6 +56,10 @@
     <string name="settings_security">Sécurité &amp; Biométrie</string>
     <string name="settings_blocked_numbers">Numéros bloqués</string>
     <string name="settings_auto_copy_codes">Copie automatique des codes</string>
+    <string name="settings_quick_reply">Réponse rapide</string>
+    <string name="settings_quick_reply_subtitle">Répondre directement depuis la notification</string>
+    <string name="settings_quick_compose">Composition rapide</string>
+    <string name="settings_quick_compose_subtitle">Notification persistante pour envoyer des SMS depuis le volet</string>
     <string name="settings_color_scheme">Palette de couleurs</string>
     <string name="settings_theme">Thème</string>
     <string name="settings_black_theme">Thème noir uniquement</string>
@@ -141,6 +145,20 @@
     <string name="notification_action_mark_read">Marquer lu</string>
     <string name="notification_action_reply">Répondre</string>
     <string name="notification_action_delete">Supprimer</string>
+
+    <!-- Quick compose notification -->
+    <string name="quick_compose_title">Composition rapide</string>
+    <string name="quick_compose_no_contact">Aucun contact sélectionné</string>
+    <string name="quick_compose_to_label">À :</string>
+    <string name="quick_compose_contact_action">Contact</string>
+    <string name="quick_compose_contact_hint">Numéro de téléphone</string>
+    <string name="quick_compose_send_action">Envoyer</string>
+    <string name="quick_compose_message_hint">Message</string>
+    <string name="quick_compose_no_contact_toast">Définissez un contact avant</string>
+    <string name="quick_compose_invalid_contact_toast">Numéro invalide</string>
+    <string name="quick_compose_sent_toast">Message envoyé</string>
+    <string name="quick_compose_failed_toast">Envoi échoué</string>
+
     <string name="conversation_delete_title">Supprimer les messages</string>
     <plurals name="conversation_delete_body">
         <item quantity="one">Supprimer 1 message sélectionné ?</item>

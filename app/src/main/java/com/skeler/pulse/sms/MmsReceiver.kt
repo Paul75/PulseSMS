@@ -13,6 +13,7 @@ import com.google.android.mms.pdu_alt.PduParser
 import com.google.android.mms.pdu_alt.RetrieveConf
 import com.skeler.pulse.R
 import com.skeler.pulse.contact.normalizeAddressForDisplay
+import kotlinx.coroutines.runBlocking
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -158,12 +159,18 @@ class MmsReceiver : BroadcastReceiver() {
         // Only set conversation address if we have a real number (not the fallback label)
         val senderForNotification = fromDisplay.takeUnless { it == context.getString(R.string.mms_sender_label) }.orEmpty()
 
+        val quickReplyEnabled = try {
+            runBlocking { NotificationPreferences(context).isQuickReplyEnabled() }
+        } catch (e: Exception) {
+            true
+        }
         SmsNotificationHelper.notifyIncomingSms(
             context = context,
             sender = senderForNotification,
             body = textBody,
             messageId = mmsId,
             imageUri = imageUri,
+            quickReplyEnabled = quickReplyEnabled,
         )
         Log.i(TAG, "MMS notified for id=$mmsId sender=$senderForNotification")
     }

@@ -97,6 +97,11 @@
             android:name=".sms.SmsNotificationActionReceiver"
             android:exported="false" />
 
+        <!-- Quick compose notification actions — set contact / send message -->
+        <receiver
+            android:name=".sms.QuickComposeReceiver"
+            android:exported="false" />
+
         <!-- 4. Respond Via Message — quick reply from incoming call screen -->
         <service
             android:name=".sms.RespondViaMessageService"

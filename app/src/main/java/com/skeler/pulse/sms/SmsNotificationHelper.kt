@@ -48,6 +48,7 @@ object SmsNotificationHelper {
         messageId: Long = -1L,
         notificationId: Int = sender.hashCode() and 0x7fffffff,
         imageUri: android.net.Uri? = null,
+        quickReplyEnabled: Boolean = true,
     ) {
         val launchIntent = MainActivity.createLaunchIntent(
             context = context,
@@ -84,27 +85,29 @@ object SmsNotificationHelper {
         }
 
         if (messageId > 0) {
-            val remoteInput = RemoteInput.Builder(SmsNotificationActionReceiver.KEY_REPLY_TEXT)
-                .setLabel(context.getString(R.string.notification_action_reply))
-                .build()
+            if (quickReplyEnabled) {
+                val remoteInput = RemoteInput.Builder(SmsNotificationActionReceiver.KEY_REPLY_TEXT)
+                    .setLabel(context.getString(R.string.notification_action_reply))
+                    .build()
 
-            val replyIntent = Intent(context, SmsNotificationActionReceiver::class.java).apply {
-                action = SmsNotificationActionReceiver.ACTION_REPLY
-                putExtra(SmsNotificationActionReceiver.EXTRA_MESSAGE_ID, messageId)
-                putExtra(SmsNotificationActionReceiver.EXTRA_NOTIFICATION_ID, notificationId)
-                putExtra(SmsNotificationActionReceiver.EXTRA_SENDER_ADDRESS, sender)
+                val replyIntent = Intent(context, SmsNotificationActionReceiver::class.java).apply {
+                    action = SmsNotificationActionReceiver.ACTION_REPLY
+                    putExtra(SmsNotificationActionReceiver.EXTRA_MESSAGE_ID, messageId)
+                    putExtra(SmsNotificationActionReceiver.EXTRA_NOTIFICATION_ID, notificationId)
+                    putExtra(SmsNotificationActionReceiver.EXTRA_SENDER_ADDRESS, sender)
+                }
+                val replyPendingIntent = PendingIntent.getBroadcast(
+                    context, notificationId + REQUEST_CODE_OFFSET_REPLY, replyIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE,
+                )
+                val replyAction = NotificationCompat.Action.Builder(
+                    R.drawable.ic_action_reply, context.getString(R.string.notification_action_reply), replyPendingIntent,
+                )
+                    .addRemoteInput(remoteInput)
+                    .setAllowGeneratedReplies(true)
+                    .build()
+                builder.addAction(replyAction)
             }
-            val replyPendingIntent = PendingIntent.getBroadcast(
-                context, notificationId + REQUEST_CODE_OFFSET_REPLY, replyIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE,
-            )
-            val replyAction = NotificationCompat.Action.Builder(
-                R.drawable.ic_action_reply, context.getString(R.string.notification_action_reply), replyPendingIntent,
-            )
-                .addRemoteInput(remoteInput)
-                .setAllowGeneratedReplies(true)
-                .build()
-            builder.addAction(replyAction)
 
             builder.addAction(
                 R.drawable.ic_action_mark_read,

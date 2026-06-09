@@ -5,9 +5,11 @@ import android.content.IntentFilter
 import android.os.Build
 import android.provider.Telephony
 import androidx.core.content.ContextCompat
+import com.skeler.pulse.sms.NotificationPreferences
+import com.skeler.pulse.sms.QuickComposeNotificationManager
+import com.skeler.pulse.sms.SmsNotificationHelper
 import com.skeler.pulse.sms.SmsProcessingHelper
 import com.skeler.pulse.sms.SmsReceiver
-import com.skeler.pulse.sms.SmsNotificationHelper
 import com.skeler.pulse.sync.worker.SyncWorkerDependenciesHolder
 
 class PulseApplication : Application() {
@@ -21,6 +23,13 @@ class PulseApplication : Application() {
             override fun messageSyncOrchestrator() = appContainer.syncComponent.messageSyncOrchestrator
         }
         SmsNotificationHelper.createNotificationChannel(this)
+        QuickComposeNotificationManager.createChannel(this)
+
+        kotlinx.coroutines.runBlocking {
+            if (NotificationPreferences(this@PulseApplication).isQuickComposeEnabled()) {
+                QuickComposeNotificationManager.show(this@PulseApplication)
+            }
+        }
 
         registerSmsFallbackReceiver()
     }

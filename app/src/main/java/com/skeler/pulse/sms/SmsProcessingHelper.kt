@@ -7,6 +7,7 @@ import android.net.Uri
 import android.provider.Telephony
 import android.telephony.SmsMessage
 import android.util.Log
+import kotlinx.coroutines.runBlocking
 import java.util.Collections
 import java.util.LinkedHashSet
 
@@ -40,15 +41,27 @@ object SmsProcessingHelper {
 
             OtpClipboardAutoCopy.copyIncomingCodeIfEnabled(context, body)
 
+            val quickReplyEnabled = try {
+                runBlocking { NotificationPreferences(context).isQuickReplyEnabled() }
+            } catch (e: Exception) {
+                true
+            }
             val persistedUri = writeSmsToProvider(context, sender, body, parts.first())
             if (persistedUri != null) {
                 val messageId = ContentUris.parseId(persistedUri)
-                SmsNotificationHelper.notifyIncomingSms(context, sender, body, messageId)
+                SmsNotificationHelper.notifyIncomingSms(
+                    context = context,
+                    sender = sender,
+                    body = body,
+                    messageId = messageId,
+                    quickReplyEnabled = quickReplyEnabled,
+                )
             } else {
                 SmsNotificationHelper.notifyIncomingSms(
                     context = context,
                     sender = sender,
                     body = "New message received, but Pulse couldn't save it yet.",
+                    quickReplyEnabled = quickReplyEnabled,
                 )
             }
         }

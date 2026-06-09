@@ -4,11 +4,13 @@ import android.content.BroadcastReceiver
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import android.provider.Telephony
-import android.telephony.SmsManager
+import android.util.Log
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.RemoteInput
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class SmsNotificationActionReceiver : BroadcastReceiver() {
 
@@ -68,31 +70,22 @@ class SmsNotificationActionReceiver : BroadcastReceiver() {
             )
         }
 
-        val smsManager = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            @Suppress("DEPRECATION")
-            SmsManager.getSmsManagerForSubscriptionId(SmsManager.getDefaultSmsSubscriptionId())
-        } else {
-            @Suppress("DEPRECATION")
-            SmsManager.getDefault()
+        val pendingResult = goAsync()
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                SystemSmsSender(context, Dispatchers.IO).sendSms(address, replyText)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to send reply via SMS", e)
+            } finally {
+                pendingResult.finish()
+            }
         }
-        smsManager.sendTextMessage(address, null, replyText, null, null)
-
-        val values = ContentValues().apply {
-            put(Telephony.Sms.ADDRESS, address)
-            put(Telephony.Sms.BODY, replyText)
-            put(Telephony.Sms.DATE, System.currentTimeMillis())
-            put(Telephony.Sms.READ, 1)
-            put(Telephony.Sms.SEEN, 1)
-            put(Telephony.Sms.TYPE, Telephony.Sms.MESSAGE_TYPE_SENT)
-            put(Telephony.Sms.STATUS, Telephony.Sms.STATUS_COMPLETE)
-            put(Telephony.Sms.THREAD_ID, Telephony.Threads.getOrCreateThreadId(context, address))
-        }
-        context.contentResolver.insert(Telephony.Sms.CONTENT_URI, values)
 
         NotificationManagerCompat.from(context).cancel(notificationId)
     }
 
     companion object {
+        private const val TAG = "SmsNotificationAction"
         const val ACTION_MARK_READ = "com.skeler.pulse.action.MARK_READ"
         const val ACTION_DELETE = "com.skeler.pulse.action.DELETE"
         const val ACTION_REPLY = "com.skeler.pulse.action.REPLY"

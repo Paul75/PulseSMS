@@ -43,6 +43,7 @@ import androidx.compose.material.icons.rounded.Archive
 import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.automirrored.filled.Reply
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Fingerprint
 import androidx.compose.material.icons.rounded.Lock
@@ -97,6 +98,8 @@ import com.skeler.pulse.security.auth.BiometricAvailability
 import com.skeler.pulse.security.auth.checkBiometricAvailability
 import com.skeler.pulse.security.auth.showBiometricPrompt
 import com.skeler.pulse.sms.MessageAutomationPreferences
+import com.skeler.pulse.sms.NotificationPreferences
+import com.skeler.pulse.sms.QuickComposeNotificationManager
 import kotlinx.coroutines.launch
 
 internal data class SettingsChoiceOption(
@@ -130,6 +133,11 @@ internal fun SettingsScreen(
         MessageAutomationPreferences(context.applicationContext)
     }
     val autoCopyOtpCodes by messageAutomationPreferences.autoCopyOtpCodes.collectAsState(initial = false)
+    val notificationPreferences = remember(context) {
+        NotificationPreferences(context.applicationContext)
+    }
+    val quickReplyEnabled by notificationPreferences.quickReplyEnabled.collectAsState(initial = true)
+    val quickComposeEnabled by notificationPreferences.quickComposeEnabled.collectAsState(initial = false)
     val reducedMotion = rememberReducedMotionEnabled()
     val settingsFlingBehavior = rememberMomentumFlingBehavior(enabled = !reducedMotion)
     val appearanceOptionState = rememberLazyListState()
@@ -228,6 +236,36 @@ internal fun SettingsScreen(
                         onToggle = {
                             coroutineScope.launch {
                                 messageAutomationPreferences.setAutoCopyOtpCodesEnabled(!autoCopyOtpCodes)
+                            }
+                        },
+                    )
+                    SettingsGroupDivider()
+                    SettingsToggleRow(
+                        icon = Icons.AutoMirrored.Filled.Reply,
+                        title = stringResource(R.string.settings_quick_reply),
+                        subtitle = context.getString(R.string.settings_quick_reply_subtitle),
+                        checked = quickReplyEnabled,
+                        onToggle = {
+                            coroutineScope.launch {
+                                notificationPreferences.setQuickReplyEnabled(!quickReplyEnabled)
+                            }
+                        },
+                    )
+                    SettingsGroupDivider()
+                    SettingsToggleRow(
+                        icon = Icons.AutoMirrored.Filled.Reply,
+                        title = stringResource(R.string.settings_quick_compose),
+                        subtitle = context.getString(R.string.settings_quick_compose_subtitle),
+                        checked = quickComposeEnabled,
+                        onToggle = {
+                            coroutineScope.launch {
+                                val newValue = !quickComposeEnabled
+                                notificationPreferences.setQuickComposeEnabled(newValue)
+                                if (newValue) {
+                                    QuickComposeNotificationManager.show(context.applicationContext)
+                                } else {
+                                    QuickComposeNotificationManager.hide(context.applicationContext)
+                                }
                             }
                         },
                     )
