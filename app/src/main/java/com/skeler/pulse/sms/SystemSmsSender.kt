@@ -14,6 +14,7 @@ import android.provider.Telephony
 import android.telephony.SmsManager
 import androidx.core.content.ContextCompat
 import com.klinker.android.send_message.Message
+import com.klinker.android.send_message.MmsSentReceiver
 import com.klinker.android.send_message.Settings
 import com.klinker.android.send_message.Transaction
 import kotlinx.coroutines.CoroutineDispatcher
@@ -246,8 +247,11 @@ internal class SystemSmsSender(
         } else {
             Message(text, address)
         }.apply { save = true }
-        val settings = Settings()
-        Transaction(context, settings).sendNewMessage(message, threadId)
+        val settings = Settings().apply { setUseSystemSending(true) }
+        val transaction = Transaction(context, settings)
+        val mmsSentIntent = Intent(context, MmsSentReceiver::class.java)
+        transaction.setExplicitBroadcastForSentMms(mmsSentIntent)
+        transaction.sendNewMessage(message, threadId)
         context.contentResolver.notifyChange(Telephony.Mms.CONTENT_URI, null)
     }
 
