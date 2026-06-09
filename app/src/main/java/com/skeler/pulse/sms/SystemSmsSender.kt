@@ -246,7 +246,10 @@ internal class SystemSmsSender(
             Message(text, address, bitmaps.toTypedArray())
         } else {
             Message(text, address)
-        }.apply { save = true }
+        }.apply {
+            save = true
+            setFromAddress("+33762776815")
+        }
         val settings = Settings().apply { setUseSystemSending(true) }
         val transaction = Transaction(context, settings)
         val mmsSentIntent = Intent(context, MmsSentReceiver::class.java)
