@@ -221,6 +221,11 @@ fun PulseAppShell(
                 DESTINATION_CONVERSATION -> {
                     val conversationState by smsViewModel.conversationState.collectAsState()
                     val sendState by smsViewModel.sendState.collectAsState()
+                    LaunchedEffect(activeAddress, conversationState.messages.size) {
+                        if (!conversationState.loading && activeAddress.isNotBlank()) {
+                            NotificationManagerCompat.from(context).cancel(activeAddress.hashCode() and 0x7fffffff)
+                        }
+                    }
                     RealConversationScreen(
                         title = activeConversationTitle.ifBlank { displayNameFor(context, activeAddress) },
                         address = activeAddress,
