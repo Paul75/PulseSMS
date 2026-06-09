@@ -78,7 +78,7 @@ class SystemSmsReader(
      * Observes messages for a specific address/thread as a reactive [Flow].
      * @param maxCount Maximum number of recent messages to observe (default: no limit).
      */
-    fun observeMessages(address: String, threadId: Long? = null, maxCount: Int = Int.MAX_VALUE): Flow<List<SystemSms>> = callbackFlow {
+    fun observeMessages(address: String, threadId: Long? = null, maxCount: Int = Int.MAX_VALUE): Flow<Pair<List<SystemSms>, Int>> = callbackFlow {
         var readJob: Job? = null
         fun scheduleRead() {
             readJob?.cancel()
@@ -86,10 +86,11 @@ class SystemSmsReader(
                 try {
                     val smsMessages = readMessages(address = address, threadId = threadId, limit = maxCount)
                     val mmsMessages = readMmsMessages(threadId = threadId, address = address, limit = maxCount)
-                    trySend(mergeMessages(smsMessages, mmsMessages))
+                    val total = countConversationMessages(address, threadId)
+                    trySend(mergeMessages(smsMessages, mmsMessages) to total)
                 } catch (e: SecurityException) {
                     Log.w("SystemSmsReader", "READ_SMS permission not granted", e)
-                    trySend(emptyList())
+                    trySend(emptyList<SystemSms>() to 0)
                 }
             }
         }

@@ -12,7 +12,6 @@ import com.skeler.pulse.sms.SmsThread
 import com.skeler.pulse.sms.SystemSms
 import com.skeler.pulse.sms.SystemSmsReader
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -60,7 +59,6 @@ class RealSmsViewModel(
     private var sendSequence = 0
     private val loadedOlderMessages = mutableListOf<SystemSms>()
     private var hasMoreMessages: Boolean = false
-    private var totalMessageCount: Int = 0
 
     private fun observeInbox() {
         inboxJob?.cancel()
@@ -176,16 +174,11 @@ class RealSmsViewModel(
         val batchSize = SystemSmsReader.DEFAULT_MESSAGE_LIMIT
         loadedOlderMessages.clear()
         hasMoreMessages = false
-        totalMessageCount = 0
-        viewModelScope.launch(Dispatchers.IO) {
-            val totalCount = smsReader.countConversationMessages(address = address, threadId = threadId)
-            totalMessageCount = totalCount
-        }
         conversationJob = viewModelScope.launch {
             combine(
                 smsReader.observeMessages(address = address, threadId = threadId, maxCount = batchSize),
                 importantMessagePreferences.importantMessageIds,
-            ) { recent, importantIds ->
+            ) { (recent, totalCount), importantIds ->
                 if (recent.size >= batchSize) {
                     hasMoreMessages = true
                 }
@@ -209,7 +202,7 @@ class RealSmsViewModel(
                     importantMessageIds = visibleImportantIds,
                     isReplyable = address.isReplyableConversationAddress(),
                     hasMoreMessages = hasMoreMessages,
-                    totalMessageCount = totalMessageCount,
+                    totalMessageCount = totalCount,
                 ) to hasUnreadInbound
             }.collectLatest { (conversationState, hasUnreadInbound) ->
                 _conversationState.value = conversationState
@@ -264,7 +257,6 @@ class RealSmsViewModel(
         pendingReadTarget = null
         loadedOlderMessages.clear()
         hasMoreMessages = false
-        totalMessageCount = 0
         _conversationState.value = RealConversationState(loading = false)
         _sendState.value = SendState.Idle
     }
