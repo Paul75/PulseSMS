@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import com.skeler.pulse.R
 import com.skeler.pulse.contact.contactLookupIntent
 import com.skeler.pulse.contact.contactPhotoUriFor
+import com.skeler.pulse.contact.formatAddressForDisplay
 import com.skeler.pulse.design.component.SerafinaAvatar
 import com.skeler.pulse.design.component.StatusPill
 import com.skeler.pulse.design.util.motionAnimateItemModifier
@@ -147,6 +148,16 @@ internal fun ConversationTopBar(
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
+                        val formattedAddress = remember(address) { formatAddressForDisplay(address) }
+                        if (title != formattedAddress) {
+                            Text(
+                                text = formattedAddress,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = topBarContentColor.copy(alpha = 0.6f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
                         val resources = context.resources
                         val metaParts = buildList {
                             add(resources.getString(

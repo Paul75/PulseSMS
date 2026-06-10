@@ -206,10 +206,8 @@ private fun String.isLikelyBusinessSender(): Boolean = any(Char::isLetter)
 internal fun formatPhoneNumberForDisplay(address: String): String = formatPhoneNumber(address)
 
 internal fun formatAddressForDisplay(address: String): String {
-    address.removeBlockedKeyPrefix("phone:")?.let { phone ->
-        return formatPhoneNumber(phone)
-    }
-    return address
+    val phone = address.removeBlockedKeyPrefix("phone:") ?: address
+    return formatPhoneNumber(phone)
 }
 
 private fun formatPhoneNumber(address: String): String {
