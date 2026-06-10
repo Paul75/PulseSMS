@@ -5,6 +5,7 @@ import android.telephony.TelephonyManager
 
 internal object MyPhoneNumberProvider {
 
+    @Suppress("DEPRECATION")
     fun detect(context: Context): String? {
         val tm = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
         return tm.line1Number?.filter { it.isDigit() || it == '+' }
