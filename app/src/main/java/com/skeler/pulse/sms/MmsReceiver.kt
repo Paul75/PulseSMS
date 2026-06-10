@@ -82,7 +82,7 @@ class MmsReceiver : BroadcastReceiver() {
     private fun downloadFromLocation(context: Context, locationUrl: String): ByteArray? {
         return try {
             val url = URL(locationUrl)
-            val prefs = android.preference.PreferenceManager.getDefaultSharedPreferences(context)
+            val prefs = context.getSharedPreferences(context.packageName + "_preferences", Context.MODE_PRIVATE)
             val proxyHost = prefs.getString("mms_proxy", "") ?: ""
             val proxyPort = prefs.getString("mms_port", "80")?.toIntOrNull() ?: 80
 

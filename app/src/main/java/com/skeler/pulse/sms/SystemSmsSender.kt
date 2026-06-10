@@ -288,7 +288,7 @@ internal class SystemSmsSender(
             }
         }
 
-        val prefs = android.preference.PreferenceManager.getDefaultSharedPreferences(context)
+        val prefs = context.getSharedPreferences(context.packageName + "_preferences", Context.MODE_PRIVATE)
         var mmsc = prefs.getString("mmsc_url", "")
         var mmsProxy = prefs.getString("mms_proxy", "")
         var mmsPort = prefs.getString("mms_port", "80")
