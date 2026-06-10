@@ -250,7 +250,7 @@ internal class SystemSmsSender(
                 compressImageToMaxSize(bytes, maxSizeBytes)
             }.getOrNull()?.takeIf { it.isNotEmpty() }
         }
-        if (imageBytesList.isEmpty() && text.isBlank()) return
+        if (imageBytesList.isEmpty() && text.isBlank()) throw RuntimeException("No content to send")
         val now = System.currentTimeMillis()
 
         val parts = mutableListOf<MMSPart>()
@@ -278,7 +278,7 @@ internal class SystemSmsSender(
             parts.toTypedArray(),
             text.take(40).ifBlank { null },
         )
-        val pduBytes = messageInfo.bytes ?: return
+        val pduBytes = messageInfo.bytes ?: throw RuntimeException("PDU generation failed — image may be too large")
 
         // Insert our own MMS record with correct thread_id and addresses
         val messageUri = insertMmsRecord(threadId, address, text, imageBytesList, pduBytes.size, now)

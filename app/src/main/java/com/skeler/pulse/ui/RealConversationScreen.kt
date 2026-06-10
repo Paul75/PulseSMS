@@ -163,6 +163,11 @@ internal fun RealConversationScreen(
                 delay(1200)
                 onClearSendState()
             }
+            is SendState.Failed -> {
+                android.widget.Toast
+                    .makeText(context, R.string.conversation_send_status_failed_title, android.widget.Toast.LENGTH_SHORT)
+                    .show()
+            }
             else -> Unit
         }
     }
