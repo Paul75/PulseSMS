@@ -13,13 +13,15 @@ import android.provider.Telephony
 import android.telephony.SmsManager
 import android.util.Log
 import androidx.core.content.ContextCompat
-import com.klinker.android.send_message.Message
-import com.klinker.android.send_message.Settings
 import com.klinker.android.send_message.Transaction
+import com.google.android.mms.MMSPart
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import java.net.HttpURLConnection
+import java.net.Proxy
+import java.net.URL
 import java.util.Collections
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
@@ -243,21 +245,83 @@ internal class SystemSmsSender(
             }.getOrNull()?.takeIf { it.isNotEmpty() }
         }
         if (imageBytesList.isEmpty() && text.isBlank()) return
+        val now = System.currentTimeMillis()
 
-        val message = if (text.isBlank()) null else text
-        val mmsMessage = Message(message, address)
-
-        mmsMessage.setFromAddress("+33762776815")
+        val parts = mutableListOf<MMSPart>()
+        if (text.isNotBlank()) {
+            parts.add(MMSPart().apply {
+                MimeType = "text/plain"
+                Name = "text.txt"
+                Data = text.toByteArray()
+            })
+        }
         imageBytesList.forEach { bytes ->
-            mmsMessage.addMedia(bytes, "image/jpeg", "image_${System.currentTimeMillis()}.jpg")
+            parts.add(MMSPart().apply {
+                MimeType = "image/jpeg"
+                Name = "image_${System.currentTimeMillis()}.jpg"
+                Data = bytes
+            })
         }
 
-        val settings = Settings().apply {
-            setUseSystemSending(false)
+        val messageInfo = Transaction.getBytes(
+            context,
+            true,
+            "+33762776815",
+            arrayOf(address),
+            parts.toTypedArray(),
+            text.take(40).ifBlank { null },
+        )
+        val pduBytes = messageInfo.bytes ?: return
+        val messageUri = messageInfo.location
+
+        // Load APN settings from klinker's bundled carrier database
+        suspendCancellableCoroutine<Unit> { cont ->
+            com.klinker.android.send_message.ApnUtils.initDefaultApns(context) {
+                cont.resume(Unit)
+            }
         }
-        val transaction = Transaction(context, settings)
-        transaction.sendNewMessage(mmsMessage, threadId)
+
+        val prefs = android.preference.PreferenceManager.getDefaultSharedPreferences(context)
+        val mmsc = prefs.getString("mmsc_url", "")
+        val mmsProxy = prefs.getString("mms_proxy", "")
+        val mmsPort = prefs.getString("mms_port", "80")
+        Log.i("SystemSmsSender", "MMSC=$mmsc proxy=$mmsProxy port=$mmsPort")
+
+        if (mmsc.isNullOrBlank()) {
+            Log.e("SystemSmsSender", "No MMSC found, cannot send MMS")
+            throw RuntimeException("No MMSC configured")
+        }
+
+        sendPduToMmsc(pduBytes, mmsc, if (mmsProxy.isNullOrBlank()) null else mmsProxy, mmsPort?.toIntOrNull() ?: 80)
+
+        if (messageUri != null) {
+            contentResolver.update(messageUri, ContentValues().apply {
+                put("st", 128) // STATUS_COMPLETE
+            }, null, null)
+        }
         context.contentResolver.notifyChange(Telephony.Mms.CONTENT_URI, null)
+    }
+
+    private fun sendPduToMmsc(pduBytes: ByteArray, mmsc: String, proxy: String?, port: Int) {
+        val url = URL(mmsc)
+        val connection = if (proxy != null) {
+            url.openConnection(Proxy(Proxy.Type.HTTP, java.net.InetSocketAddress(proxy, port)))
+        } else {
+            url.openConnection()
+        } as HttpURLConnection
+
+        connection.requestMethod = "POST"
+        connection.setRequestProperty("Content-Type", "application/vnd.wap.mms-message")
+        connection.doOutput = true
+        connection.connectTimeout = 30_000
+        connection.readTimeout = 60_000
+        connection.outputStream.use { it.write(pduBytes) }
+        val code = connection.responseCode
+        Log.i("SystemSmsSender", "MMS HTTP response code=$code")
+        if (code !in 200..299) {
+            throw RuntimeException("MMS server returned $code")
+        }
+        connection.disconnect()
     }
 
     private fun deliveryCallbackToken(address: String, messageUri: Uri?): String =
