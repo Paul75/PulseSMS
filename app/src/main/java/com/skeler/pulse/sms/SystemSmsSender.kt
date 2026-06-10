@@ -283,15 +283,24 @@ internal class SystemSmsSender(
 
         // Load APN settings from klinker's bundled carrier database
         suspendCancellableCoroutine<Unit> { cont ->
-            com.klinker.android.send_message.ApnUtils.initDefaultApns(context) {
-                cont.resume(Unit)
+            com.klinker.android.send_message.ApnUtils.initDefaultApns(context) { cont.resume(Unit) }
+        }
+
+        // Copy klinker's SharedPreferences values to DataStore for consistency
+        runCatching {
+            val sp = context.getSharedPreferences(context.packageName + "_preferences", Context.MODE_PRIVATE)
+            val spMmsc = sp.getString("mmsc_url", "")
+            val spProxy = sp.getString("mms_proxy", "")
+            val spPort = sp.getString("mms_port", "")
+            if (!spMmsc.isNullOrBlank() || !spProxy.isNullOrBlank()) {
+                MmsPreferences(context).setMmsProxy(spProxy, spPort, spMmsc)
             }
         }
 
-        val prefs = context.getSharedPreferences(context.packageName + "_preferences", Context.MODE_PRIVATE)
-        var mmsc = prefs.getString("mmsc_url", "")
-        var mmsProxy = prefs.getString("mms_proxy", "")
-        var mmsPort = prefs.getString("mms_port", "80")
+        val mmsPrefs = MmsPreferences(context)
+        var mmsc = mmsPrefs.getMmscUrl()
+        var mmsProxy = mmsPrefs.getMmsProxy()
+        var mmsPort = mmsPrefs.getMmsPort()
 
         if (mmsc.isNullOrBlank()) {
             Log.w("SystemSmsSender", "ApnUtils gave no MMSC, querying system APN provider")
@@ -309,21 +318,22 @@ internal class SystemSmsSender(
                             mmsc = url
                             mmsProxy = c.getString(c.getColumnIndexOrThrow("mmsproxy"))
                             mmsPort = c.getString(c.getColumnIndexOrThrow("mmsport"))
+                            // Save system APN values to DataStore for future use
+                            runCatching { mmsPrefs.setMmsProxy(mmsProxy, mmsPort, mmsc) }
                             break
                         }
                     }
                 }
             }
         }
-        Log.i("SystemSmsSender", "MMSC=$mmsc proxy=$mmsProxy port=$mmsPort")
 
-        val resolvedMmsc = mmsc
-        if (resolvedMmsc.isNullOrBlank()) {
+        if (mmsc.isNullOrBlank()) {
             Log.e("SystemSmsSender", "No MMSC found, cannot send MMS")
             throw RuntimeException("No MMSC configured")
         }
+        Log.i("SystemSmsSender", "MMSC=$mmsc proxy=$mmsProxy port=$mmsPort")
 
-        sendPduToMmsc(pduBytes, resolvedMmsc, if (mmsProxy.isNullOrBlank()) null else mmsProxy, mmsPort?.toIntOrNull() ?: 80)
+        sendPduToMmsc(pduBytes, mmsc, if (mmsProxy.isNullOrBlank()) null else mmsProxy, mmsPort?.toIntOrNull() ?: 80)
 
         if (messageUri != null) {
             contentResolver.update(messageUri, ContentValues().apply {

@@ -49,6 +49,7 @@ object SmsNotificationHelper {
         notificationId: Int = sender.hashCode() and 0x7fffffff,
         imageUri: android.net.Uri? = null,
         quickReplyEnabled: Boolean = true,
+        isMms: Boolean = false,
     ) {
         val launchIntent = MainActivity.createLaunchIntent(
             context = context,
@@ -105,6 +106,7 @@ object SmsNotificationHelper {
                     putExtra(SmsNotificationActionReceiver.EXTRA_MESSAGE_ID, messageId)
                     putExtra(SmsNotificationActionReceiver.EXTRA_NOTIFICATION_ID, notificationId)
                     putExtra(SmsNotificationActionReceiver.EXTRA_SENDER_ADDRESS, sender)
+                    putExtra(SmsNotificationActionReceiver.EXTRA_IS_MMS, isMms)
                 }
                 val replyPendingIntent = PendingIntent.getBroadcast(
                     context, notificationId + REQUEST_CODE_OFFSET_REPLY, replyIntent,
@@ -122,12 +124,12 @@ object SmsNotificationHelper {
             builder.addAction(
                 R.drawable.ic_action_mark_read,
                 context.getString(R.string.notification_action_mark_read),
-                createActionIntent(context, SmsNotificationActionReceiver.ACTION_MARK_READ, messageId, notificationId),
+                createActionIntent(context, SmsNotificationActionReceiver.ACTION_MARK_READ, messageId, notificationId, isMms),
             )
             builder.addAction(
                 R.drawable.ic_action_delete,
                 context.getString(R.string.notification_action_delete),
-                createActionIntent(context, SmsNotificationActionReceiver.ACTION_DELETE, messageId, notificationId),
+                createActionIntent(context, SmsNotificationActionReceiver.ACTION_DELETE, messageId, notificationId, isMms),
             )
         }
 
@@ -145,11 +147,13 @@ object SmsNotificationHelper {
         action: String,
         messageId: Long,
         notificationId: Int,
+        isMms: Boolean = false,
     ): PendingIntent {
         val intent = Intent(context, SmsNotificationActionReceiver::class.java).apply {
             this.action = action
             putExtra(SmsNotificationActionReceiver.EXTRA_MESSAGE_ID, messageId)
             putExtra(SmsNotificationActionReceiver.EXTRA_NOTIFICATION_ID, notificationId)
+            putExtra(SmsNotificationActionReceiver.EXTRA_IS_MMS, isMms)
         }
         val requestCode = when (action) {
             SmsNotificationActionReceiver.ACTION_MARK_READ -> notificationId + REQUEST_CODE_OFFSET_MARK_READ

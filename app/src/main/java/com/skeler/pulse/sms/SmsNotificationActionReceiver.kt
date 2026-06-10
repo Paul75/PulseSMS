@@ -17,22 +17,26 @@ class SmsNotificationActionReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val messageId = intent.getLongExtra(EXTRA_MESSAGE_ID, -1L)
         val notificationId = intent.getIntExtra(EXTRA_NOTIFICATION_ID, -1)
+        val isMms = intent.getBooleanExtra(EXTRA_IS_MMS, false)
 
         when (intent.action) {
-            ACTION_MARK_READ -> handleMarkRead(context, messageId, notificationId)
-            ACTION_DELETE -> handleDelete(context, messageId, notificationId)
-            ACTION_REPLY -> handleReply(context, intent, notificationId)
+            ACTION_MARK_READ -> handleMarkRead(context, messageId, notificationId, isMms)
+            ACTION_DELETE -> handleDelete(context, messageId, notificationId, isMms)
+            ACTION_REPLY -> handleReply(context, intent, notificationId, isMms)
         }
     }
 
-    private fun handleMarkRead(context: Context, messageId: Long, notificationId: Int) {
+    private fun messageUri(isMms: Boolean) =
+        if (isMms) Telephony.Mms.CONTENT_URI else Telephony.Sms.CONTENT_URI
+
+    private fun handleMarkRead(context: Context, messageId: Long, notificationId: Int, isMms: Boolean) {
         if (messageId < 0) return
         val values = ContentValues().apply {
             put(Telephony.Sms.READ, 1)
             put(Telephony.Sms.SEEN, 1)
         }
         context.contentResolver.update(
-            Telephony.Sms.CONTENT_URI,
+            messageUri(isMms),
             values,
             "${Telephony.Sms._ID} = ?",
             arrayOf(messageId.toString()),
@@ -40,17 +44,17 @@ class SmsNotificationActionReceiver : BroadcastReceiver() {
         NotificationManagerCompat.from(context).cancel(notificationId)
     }
 
-    private fun handleDelete(context: Context, messageId: Long, notificationId: Int) {
+    private fun handleDelete(context: Context, messageId: Long, notificationId: Int, isMms: Boolean) {
         if (messageId < 0) return
         context.contentResolver.delete(
-            Telephony.Sms.CONTENT_URI,
+            messageUri(isMms),
             "${Telephony.Sms._ID} = ?",
             arrayOf(messageId.toString()),
         )
         NotificationManagerCompat.from(context).cancel(notificationId)
     }
 
-    private fun handleReply(context: Context, intent: Intent, notificationId: Int) {
+    private fun handleReply(context: Context, intent: Intent, notificationId: Int, isMms: Boolean) {
         val messageId = intent.getLongExtra(EXTRA_MESSAGE_ID, -1L)
         val results = RemoteInput.getResultsFromIntent(intent)
         val replyText = results?.getCharSequence(KEY_REPLY_TEXT)?.toString() ?: return
@@ -64,7 +68,7 @@ class SmsNotificationActionReceiver : BroadcastReceiver() {
                 put(Telephony.Sms.SEEN, 1)
             }
             context.contentResolver.update(
-                Telephony.Sms.CONTENT_URI, readValues,
+                messageUri(isMms), readValues,
                 "${Telephony.Sms._ID} = ?",
                 arrayOf(messageId.toString()),
             )
@@ -93,5 +97,6 @@ class SmsNotificationActionReceiver : BroadcastReceiver() {
         const val EXTRA_MESSAGE_ID = "extra_message_id"
         const val EXTRA_NOTIFICATION_ID = "extra_notification_id"
         const val EXTRA_SENDER_ADDRESS = "extra_sender_address"
+        const val EXTRA_IS_MMS = "extra_is_mms"
     }
 }

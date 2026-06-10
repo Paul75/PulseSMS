@@ -13,6 +13,9 @@ import com.google.android.mms.pdu_alt.PduParser
 import com.google.android.mms.pdu_alt.RetrieveConf
 import com.skeler.pulse.R
 import com.skeler.pulse.contact.normalizeAddressForDisplay
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import java.io.File
 import java.net.HttpURLConnection
@@ -34,7 +37,7 @@ class MmsReceiver : BroadcastReceiver() {
         }
         Log.i(TAG, "WAP_PUSH received, PDU size: ${pduData.size} bytes")
 
-        Thread {
+        CoroutineScope(Dispatchers.IO).launch {
             try {
                 handleWapPush(context, pduData)
             } catch (e: Exception) {
@@ -42,7 +45,7 @@ class MmsReceiver : BroadcastReceiver() {
             } finally {
                 pendingResult.finish()
             }
-        }.start()
+        }
     }
 
     private fun handleWapPush(context: Context, pduData: ByteArray) {
@@ -82,9 +85,20 @@ class MmsReceiver : BroadcastReceiver() {
     private fun downloadFromLocation(context: Context, locationUrl: String): ByteArray? {
         return try {
             val url = URL(locationUrl)
-            val prefs = context.getSharedPreferences(context.packageName + "_preferences", Context.MODE_PRIVATE)
-            val proxyHost = prefs.getString("mms_proxy", "") ?: ""
-            val proxyPort = prefs.getString("mms_port", "80")?.toIntOrNull() ?: 80
+            val (proxyHost, proxyPort) = runBlocking {
+                val mmsPrefs = MmsPreferences(context)
+                val dsHost = mmsPrefs.getMmsProxy()
+                val dsPort = mmsPrefs.getMmsPort()
+                if (!dsHost.isNullOrBlank()) {
+                    dsHost to (dsPort?.toIntOrNull() ?: 80)
+                } else {
+                    // Fallback to SharedPreferences (klinker ApnUtils writes there)
+                    val sp = context.getSharedPreferences(context.packageName + "_preferences", Context.MODE_PRIVATE)
+                    val spHost = sp.getString("mms_proxy", "") ?: ""
+                    val spPort = sp.getString("mms_port", "80")?.toIntOrNull() ?: 80
+                    spHost to spPort
+                }
+            }
 
             val connection = if (proxyHost.isNotBlank()) {
                 url.openConnection(Proxy(Proxy.Type.HTTP, InetSocketAddress(proxyHost, proxyPort)))
@@ -125,7 +139,7 @@ class MmsReceiver : BroadcastReceiver() {
         }
 
         val threadId = try {
-            Telephony.Threads.getOrCreateThreadId(context, fromDisplay)
+            Telephony.Threads.getOrCreateThreadId(context, fromRaw)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to resolve thread_id", e)
             return
@@ -156,7 +170,7 @@ class MmsReceiver : BroadcastReceiver() {
 
         // 2. Insert from address
         val addrValues = ContentValues().apply {
-            put("address", fromDisplay)
+            put("address", fromRaw)
             put("charset", 106)
             put("type", 137) // PduHeaders.FROM
         }
@@ -189,6 +203,7 @@ class MmsReceiver : BroadcastReceiver() {
             messageId = mmsId,
             imageUri = imageUri,
             quickReplyEnabled = quickReplyEnabled,
+            isMms = true,
         )
         Log.i(TAG, "MMS notified for id=$mmsId sender=$senderForNotification")
 

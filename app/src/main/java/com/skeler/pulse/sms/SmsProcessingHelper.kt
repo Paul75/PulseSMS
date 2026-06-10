@@ -7,7 +7,6 @@ import android.net.Uri
 import android.provider.Telephony
 import android.telephony.SmsMessage
 import android.util.Log
-import kotlinx.coroutines.runBlocking
 import java.util.Collections
 import java.util.LinkedHashSet
 
@@ -25,7 +24,7 @@ object SmsProcessingHelper {
      * Deduplicates by sender+body+timestamp to handle cases where both
      * [SMS_DELIVER] and [SMS_RECEIVED] fire for the same message.
      */
-    fun processIncomingSms(context: Context, messages: Array<SmsMessage>) {
+    suspend fun processIncomingSms(context: Context, messages: Array<SmsMessage>) {
         val grouped = messages.groupBy { it.originatingAddress ?: "Unknown" }
         for ((sender, parts) in grouped) {
             val body = parts.joinToString("") { it.messageBody ?: "" }
@@ -35,14 +34,16 @@ object SmsProcessingHelper {
             val dedupKey = "$sender|$body|$timestampMillis"
             if (!processedRecently.add(dedupKey)) continue
 
-            if (processedRecently.size > MAX_DEDUP_SIZE) {
-                processedRecently.remove(processedRecently.first())
+            synchronized(processedRecently) {
+                if (processedRecently.size > MAX_DEDUP_SIZE) {
+                    processedRecently.remove(processedRecently.first())
+                }
             }
 
             OtpClipboardAutoCopy.copyIncomingCodeIfEnabled(context, body)
 
             val quickReplyEnabled = try {
-                runBlocking { NotificationPreferences(context).isQuickReplyEnabled() }
+                NotificationPreferences(context).isQuickReplyEnabled()
             } catch (e: Exception) {
                 true
             }

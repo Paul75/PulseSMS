@@ -120,7 +120,7 @@ object QuickComposeNotificationManager {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .edit()
             .putString(KEY_TARGET_NUMBER, number)
-            .commit()
+            .commit() // synchronous: caller may be BroadcastReceiver without goAsync()
     }
 
     private fun getLastContactedNumber(context: Context): String? {
@@ -152,7 +152,7 @@ object QuickComposeNotificationManager {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .edit()
             .remove(KEY_TARGET_NUMBER)
-            .commit()
+            .commit() // synchronous: caller may be BroadcastReceiver without goAsync()
     }
 
     const val KEY_CONTACT_INPUT = "contact_input"

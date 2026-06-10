@@ -5,6 +5,9 @@ import android.content.Context
 import android.content.Intent
 import android.provider.Telephony
 import android.util.Log
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class SmsReceiver : BroadcastReceiver() {
 
@@ -16,7 +19,7 @@ class SmsReceiver : BroadcastReceiver() {
         if (messages.isNullOrEmpty()) return
 
         val pendingResult = goAsync()
-        Thread {
+        CoroutineScope(Dispatchers.IO).launch {
             try {
                 SmsProcessingHelper.processIncomingSms(context, messages)
             } catch (e: Exception) {
@@ -24,7 +27,7 @@ class SmsReceiver : BroadcastReceiver() {
             } finally {
                 pendingResult.finish()
             }
-        }.start()
+        }
     }
 
     companion object {
