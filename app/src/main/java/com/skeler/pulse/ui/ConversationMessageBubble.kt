@@ -277,7 +277,10 @@ internal fun ConversationMessageBubble(
                                     .widthIn(max = 200.dp)
                                     .aspectRatio(1f)
                                     .clip(bubbleShape)
-                                    .clickable { showImageDialog = true },
+                                    .combinedClickable(
+                                        onClick = { showImageDialog = true },
+                                        onLongClick = onLongClickAction,
+                                    ),
                                 contentScale = ContentScale.Crop,
                             )
                             if (showImageDialog) {
