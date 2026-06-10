@@ -282,17 +282,42 @@ internal class SystemSmsSender(
         }
 
         val prefs = android.preference.PreferenceManager.getDefaultSharedPreferences(context)
-        val mmsc = prefs.getString("mmsc_url", "")
-        val mmsProxy = prefs.getString("mms_proxy", "")
-        val mmsPort = prefs.getString("mms_port", "80")
+        var mmsc = prefs.getString("mmsc_url", "")
+        var mmsProxy = prefs.getString("mms_proxy", "")
+        var mmsPort = prefs.getString("mms_port", "80")
+
+        // Fallback: query the system APN provider directly
+        if (mmsc.isNullOrBlank()) {
+            Log.w("SystemSmsSender", "ApnUtils gave no MMSC, querying system APN provider")
+            val subId = try { android.telephony.SubscriptionManager.getDefaultSubscriptionId() } catch (_: Exception) { -1 }
+            if (subId >= 0) {
+                val apnUri = Telephony.Carriers.CONTENT_URI.buildUpon()
+                    .appendPath("subId").appendPath(subId.toString()).build()
+                val cursor = try {
+                    contentResolver.query(apnUri, null, "type LIKE '%mms%'", null, null)
+                } catch (_: Exception) { null }
+                cursor?.use { c ->
+                    while (c.moveToNext()) {
+                        val url = c.getString(c.getColumnIndexOrThrow("mmsc"))
+                        if (!url.isNullOrBlank()) {
+                            mmsc = url
+                            mmsProxy = c.getString(c.getColumnIndexOrThrow("mmsproxy"))
+                            mmsPort = c.getString(c.getColumnIndexOrThrow("mmsport"))
+                            break
+                        }
+                    }
+                }
+            }
+        }
         Log.i("SystemSmsSender", "MMSC=$mmsc proxy=$mmsProxy port=$mmsPort")
 
-        if (mmsc.isNullOrBlank()) {
+        val resolvedMmsc = mmsc
+        if (resolvedMmsc.isNullOrBlank()) {
             Log.e("SystemSmsSender", "No MMSC found, cannot send MMS")
             throw RuntimeException("No MMSC configured")
         }
 
-        sendPduToMmsc(pduBytes, mmsc, if (mmsProxy.isNullOrBlank()) null else mmsProxy, mmsPort?.toIntOrNull() ?: 80)
+        sendPduToMmsc(pduBytes, resolvedMmsc, if (mmsProxy.isNullOrBlank()) null else mmsProxy, mmsPort?.toIntOrNull() ?: 80)
 
         if (messageUri != null) {
             contentResolver.update(messageUri, ContentValues().apply {
