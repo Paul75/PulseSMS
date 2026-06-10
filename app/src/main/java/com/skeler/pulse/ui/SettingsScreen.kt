@@ -98,6 +98,7 @@ import com.skeler.pulse.security.auth.BiometricAvailability
 import com.skeler.pulse.security.auth.checkBiometricAvailability
 import com.skeler.pulse.security.auth.showBiometricPrompt
 import com.skeler.pulse.sms.MessageAutomationPreferences
+import com.skeler.pulse.sms.MmsPreferences
 import com.skeler.pulse.sms.NotificationPreferences
 import com.skeler.pulse.sms.QuickComposeNotificationManager
 import kotlinx.coroutines.launch
@@ -331,6 +332,39 @@ internal fun SettingsScreen(
                     )
                 }
             }
+            item(key = "mms_header") { SettingsSectionHeader(stringResource(R.string.settings_mms)) }
+            item(key = "mms_card") {
+                val mmsPreferences = remember(context) {
+                    MmsPreferences(context.applicationContext)
+                }
+                val mmsImageSizeKb by mmsPreferences.maxImageSizeKb.collectAsState(initial = MmsPreferences.DEFAULT_MAX_IMAGE_SIZE_KB)
+                val sizeOptions = remember {
+                    listOf(150, 300, 500, 750, 1000, MmsPreferences.UNLIMITED)
+                }
+                SettingsGroupCard {
+                    SettingsChoiceRow(
+                        icon = Icons.Outlined.Sms,
+                        title = stringResource(R.string.settings_mms_image_size),
+                        subtitle = mmsSizeLabel(context, mmsImageSizeKb),
+                    ) {
+                        SettingsChoiceRail(
+                            options = sizeOptions.map { value ->
+                                SettingsChoiceOption(
+                                    id = value.toString(),
+                                    label = mmsSizeLabel(context, value),
+                                )
+                            },
+                            selectedId = mmsImageSizeKb.toString(),
+                            reducedMotion = reducedMotion,
+                            onSelect = { optionId ->
+                                coroutineScope.launch {
+                                    mmsPreferences.setMaxImageSizeKb(optionId.toIntOrNull() ?: MmsPreferences.DEFAULT_MAX_IMAGE_SIZE_KB)
+                                }
+                            },
+                        )
+                    }
+                }
+            }
             item(key = "bottom_spacer") { Spacer(Modifier.height(32.dp)) }
         }
     }
@@ -399,6 +433,12 @@ private fun localeDisplayName(context: android.content.Context, locale: String):
     "en" -> context.getString(R.string.settings_language_english_label)
     "fr" -> context.getString(R.string.settings_language_french_label)
     else -> context.getString(R.string.settings_language_system_label)
+}
+
+private fun mmsSizeLabel(context: android.content.Context, sizeKb: Int): String = when (sizeKb) {
+    1000 -> context.getString(R.string.settings_mms_size_mb)
+    -1 -> context.getString(R.string.settings_mms_size_unlimited)
+    else -> context.getString(R.string.settings_mms_size_kb, sizeKb)
 }
 
 // ── Settings sub-components ──

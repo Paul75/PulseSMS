@@ -237,4 +237,12 @@
     <string name="message_status_pending">En attente</string>
     <string name="message_status_failed">Échec</string>
     <string name="message_status_unknown">Inconnu</string>
+
+    <!-- MMS settings -->
+    <string name="settings_mms">MMS</string>
+    <string name="settings_mms_image_size">Taille max. des photos</string>
+    <string name="settings_mms_image_size_subtitle">Compresser les photos MMS à cette taille max.</string>
+    <string name="settings_mms_size_kb">%d Ko</string>
+    <string name="settings_mms_size_mb">1 Mo</string>
+    <string name="settings_mms_size_unlimited">Illimité</string>
 </resources>

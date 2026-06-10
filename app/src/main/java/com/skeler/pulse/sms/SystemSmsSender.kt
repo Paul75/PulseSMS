@@ -8,6 +8,8 @@ import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.provider.Telephony
 import android.telephony.SmsManager
@@ -230,18 +232,21 @@ internal class SystemSmsSender(
 
     suspend fun sendMms(address: String, text: String, imageUris: List<Uri> = emptyList()) = withContext(ioDispatcher) {
         try {
-            sendMmsInternal(address, text, imageUris)
+            val maxSizeKb = MmsPreferences(context).getMaxImageSizeKb()
+            sendMmsInternal(address, text, imageUris, maxSizeKb)
         } catch (e: Exception) {
             Log.e("SystemSmsSender", "sendMms failed", e)
             throw e
         }
     }
 
-    private suspend fun sendMmsInternal(address: String, text: String, imageUris: List<Uri>) {
+    private suspend fun sendMmsInternal(address: String, text: String, imageUris: List<Uri>, maxImageSizeKb: Int) {
         val threadId = Telephony.Threads.getOrCreateThreadId(context, address)
+        val maxSizeBytes = if (maxImageSizeKb <= 0) -1 else maxImageSizeKb * 1024
         val imageBytesList = imageUris.mapNotNull { uri ->
             runCatching {
-                context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: return@runCatching null
+                compressImageToMaxSize(bytes, maxSizeBytes)
             }.getOrNull()?.takeIf { it.isNotEmpty() }
         }
         if (imageBytesList.isEmpty() && text.isBlank()) return
@@ -406,6 +411,40 @@ internal class SystemSmsSender(
 
     private fun deliveryCallbackToken(address: String, messageUri: Uri?): String =
         "${java.util.UUID.randomUUID()}_${messageUri?.lastPathSegment.orEmpty()}_${address.hashCode()}"
+
+    private fun compressImageToMaxSize(bytes: ByteArray, maxSizeBytes: Int): ByteArray {
+        if (maxSizeBytes <= 0 || bytes.size <= maxSizeBytes) return bytes
+
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return bytes
+
+        var sampleSize = maxOf(bounds.outWidth / 2048, bounds.outHeight / 2048, 1)
+        Log.d("SystemSmsSender", "compress: ${bounds.outWidth}x${bounds.outHeight}, ${bytes.size}B target=${maxSizeBytes}B sample=$sampleSize")
+
+        while (sampleSize <= 8) {
+            val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size,
+                BitmapFactory.Options().apply { inSampleSize = sampleSize }
+            ) ?: return bytes
+
+            val out = java.io.ByteArrayOutputStream()
+            var quality = 85
+            while (quality >= 10) {
+                out.reset()
+                if (bitmap.compress(Bitmap.CompressFormat.JPEG, quality, out) && out.size() <= maxSizeBytes) {
+                    bitmap.recycle()
+                    Log.d("SystemSmsSender", "compressed: ${bytes.size} -> ${out.size()}B (sample=$sampleSize q=$quality)")
+                    return out.toByteArray()
+                }
+                quality -= 15
+            }
+            bitmap.recycle()
+            sampleSize *= 2
+        }
+
+        Log.w("SystemSmsSender", "compress: could not fit in $maxSizeBytes B, sending original (${bytes.size}B)")
+        return bytes
+    }
 
     private fun buildCallbackIntents(
         action: String,
