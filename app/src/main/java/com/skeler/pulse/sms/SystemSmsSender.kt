@@ -265,14 +265,16 @@ internal class SystemSmsSender(
 
         val messageInfo = Transaction.getBytes(
             context,
-            true,
+            false,
             "+33762776815",
             arrayOf(address),
             parts.toTypedArray(),
             text.take(40).ifBlank { null },
         )
         val pduBytes = messageInfo.bytes ?: return
-        val messageUri = messageInfo.location
+
+        // Insert our own MMS record with correct thread_id and addresses
+        val messageUri = insertMmsRecord(threadId, address, text, imageBytesList, pduBytes.size, now)
 
         // Load APN settings from klinker's bundled carrier database
         suspendCancellableCoroutine<Unit> { cont ->
@@ -347,6 +349,60 @@ internal class SystemSmsSender(
             throw RuntimeException("MMS server returned $code")
         }
         connection.disconnect()
+    }
+
+    private fun insertMmsRecord(
+        threadId: Long, address: String, text: String, imageBytesList: List<ByteArray>, pduSize: Int, now: Long,
+    ): Uri? {
+        val mmsValues = ContentValues().apply {
+            put("thread_id", threadId)
+            put("date", now / 1000L)
+            put("msg_box", Telephony.Mms.MESSAGE_BOX_OUTBOX)
+            put("read", 1)
+            put("sub", text.take(40).ifBlank { null })
+            put("sub_cs", 106)
+            put("ct_t", "application/vnd.wap.multipart.related")
+            put("exp", pduSize)
+            put("m_cls", "personal")
+            put("m_type", 128)
+            put("v", 18)
+            put("pri", 129)
+            put("tr_id", "T${now.toString(16)}")
+            put("resp_st", 128)
+        }
+        val mmsUri = contentResolver.insert(Telephony.Mms.CONTENT_URI, mmsValues) ?: return null
+        val mmsId = mmsUri.lastPathSegment ?: return null
+
+        if (text.isNotBlank()) {
+            contentResolver.insert(Uri.parse("content://mms/$mmsId/part"), ContentValues().apply {
+                put("mid", mmsId)
+                put("ct", "text/plain")
+                put("text", text)
+            })
+        }
+        imageBytesList.forEach { bytes ->
+            val partUri = Uri.parse("content://mms/$mmsId/part")
+            val insertedPart = contentResolver.insert(partUri, ContentValues().apply {
+                put("mid", mmsId)
+                put("ct", "image/jpeg")
+                put("cid", "<${System.currentTimeMillis()}>")
+                put("fn", "image_${System.currentTimeMillis()}.jpg")
+            })
+            if (insertedPart != null) {
+                contentResolver.openOutputStream(insertedPart)?.use { it.write(bytes) }
+            }
+        }
+        contentResolver.insert(Uri.parse("content://mms/$mmsId/addr"), ContentValues().apply {
+            put("address", "+33762776815")
+            put("charset", 106)
+            put("type", 137)
+        })
+        contentResolver.insert(Uri.parse("content://mms/$mmsId/addr"), ContentValues().apply {
+            put("address", address)
+            put("charset", 106)
+            put("type", 151)
+        })
+        return mmsUri
     }
 
     private fun deliveryCallbackToken(address: String, messageUri: Uri?): String =
