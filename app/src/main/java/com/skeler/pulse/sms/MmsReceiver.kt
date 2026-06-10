@@ -113,9 +113,16 @@ class MmsReceiver : BroadcastReceiver() {
     }
 
     private fun storeMms(context: Context, conf: RetrieveConf, fromFallback: String) {
-        val fromDisplay = (conf.from?.string ?: fromFallback)
+        val fromRaw = conf.from?.string ?: fromFallback
+        val fromDisplay = fromRaw
             .normalizeAddressForDisplay()
             .ifBlank { context.getString(R.string.mms_sender_label) }
+
+        // Skip delivery notifications FROM our own number (they create confusing threads)
+        if (MyPhoneNumberProvider.isMyNumber(context, fromRaw)) {
+            Log.i(TAG, "Skipping MMS from self (delivery notification)")
+            return
+        }
 
         val threadId = try {
             Telephony.Threads.getOrCreateThreadId(context, fromDisplay)

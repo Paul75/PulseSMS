@@ -268,10 +268,11 @@ internal class SystemSmsSender(
             })
         }
 
+        val myNumber = MyPhoneNumberProvider.detect(context) ?: "+33762776815"
         val messageInfo = Transaction.getBytes(
             context,
             false,
-            "+33762776815",
+            myNumber,
             arrayOf(address),
             parts.toTypedArray(),
             text.take(40).ifBlank { null },
@@ -397,7 +398,7 @@ internal class SystemSmsSender(
             }
         }
         contentResolver.insert(Uri.parse("content://mms/$mmsId/addr"), ContentValues().apply {
-            put("address", "+33762776815")
+            put("address", MyPhoneNumberProvider.detect(context) ?: "+33762776815")
             put("charset", 106)
             put("type", 137)
         })

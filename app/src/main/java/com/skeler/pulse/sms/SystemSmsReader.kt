@@ -176,8 +176,14 @@ class SystemSmsReader(
                     val mmsMsgBox = c.getInt(msgBoxIdx)
                     val accumulator = threads.getOrPut(providerThreadId) {
                         val addr = try {
-                            MmsAddressResolver.resolveAddress(context, mmsId, mmsMsgBox)
-                                .ifEmpty { "Unknown" }
+                            val resolved = MmsAddressResolver.resolveAddress(context, mmsId, mmsMsgBox)
+                            if (resolved.isNotEmpty() && MyPhoneNumberProvider.isMyNumber(context, resolved)) {
+                                val (from, to) = MmsAddressResolver.resolveBothAddresses(context, mmsId)
+                                val other = if (from == resolved) to else from
+                                if (other.isNotEmpty()) other else resolved
+                            } else {
+                                resolved
+                            }.ifEmpty { "Unknown" }
                         } catch (e: SecurityException) {
                             "Unknown"
                         }
