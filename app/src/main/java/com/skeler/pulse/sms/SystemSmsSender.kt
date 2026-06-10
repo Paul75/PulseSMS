@@ -79,8 +79,9 @@ internal class SystemSmsSender(
         if (messageUri == null) return
         val values = ContentValues().apply {
             put(Telephony.Sms.TYPE, messageType)
-            if (messageType == Telephony.Sms.MESSAGE_TYPE_FAILED) {
-                put(Telephony.Sms.STATUS, Telephony.Sms.STATUS_FAILED)
+            when (messageType) {
+                Telephony.Sms.MESSAGE_TYPE_SENT -> put(Telephony.Sms.STATUS, Telephony.Sms.STATUS_COMPLETE)
+                Telephony.Sms.MESSAGE_TYPE_FAILED -> put(Telephony.Sms.STATUS, Telephony.Sms.STATUS_FAILED)
             }
         }
         contentResolver.update(messageUri, values, null, null)
