@@ -14,7 +14,10 @@ import com.google.android.mms.pdu_alt.RetrieveConf
 import com.skeler.pulse.R
 import com.skeler.pulse.contact.normalizeAddressForDisplay
 import kotlinx.coroutines.runBlocking
+import java.io.File
 import java.net.HttpURLConnection
+import java.net.InetSocketAddress
+import java.net.Proxy
 import java.net.URL
 
 class MmsReceiver : BroadcastReceiver() {
@@ -60,7 +63,7 @@ class MmsReceiver : BroadcastReceiver() {
             return
         }
 
-        val mmsData = downloadFromLocation(locationUrl)
+        val mmsData = downloadFromLocation(context, locationUrl)
         if (mmsData == null) {
             Log.e(TAG, "Download failed")
             return
@@ -76,10 +79,18 @@ class MmsReceiver : BroadcastReceiver() {
         storeMms(context, retrieveConf, from)
     }
 
-    private fun downloadFromLocation(locationUrl: String): ByteArray? {
+    private fun downloadFromLocation(context: Context, locationUrl: String): ByteArray? {
         return try {
             val url = URL(locationUrl)
-            val connection = url.openConnection() as HttpURLConnection
+            val prefs = android.preference.PreferenceManager.getDefaultSharedPreferences(context)
+            val proxyHost = prefs.getString("mms_proxy", "") ?: ""
+            val proxyPort = prefs.getString("mms_port", "80")?.toIntOrNull() ?: 80
+
+            val connection = if (proxyHost.isNotBlank()) {
+                url.openConnection(Proxy(Proxy.Type.HTTP, InetSocketAddress(proxyHost, proxyPort)))
+            } else {
+                url.openConnection()
+            } as HttpURLConnection
             connection.requestMethod = "GET"
             connection.connectTimeout = 30_000
             connection.readTimeout = 30_000
@@ -118,8 +129,8 @@ class MmsReceiver : BroadcastReceiver() {
         val mmsValues = ContentValues().apply {
             put("date", now)
             put("msg_box", Telephony.Mms.MESSAGE_BOX_INBOX)
-            put("read", 1)
-            put("seen", 1)
+            put("read", 0)
+            put("seen", 0)
             put("m_type", conf.messageType)
             put("sub", conf.subject?.string.orEmpty())
             put("sub_cs", 106)
@@ -173,6 +184,9 @@ class MmsReceiver : BroadcastReceiver() {
             quickReplyEnabled = quickReplyEnabled,
         )
         Log.i(TAG, "MMS notified for id=$mmsId sender=$senderForNotification")
+
+        // Force the UI to refresh (system provider may not auto-notify on MIUI)
+        context.contentResolver.notifyChange(Telephony.Mms.CONTENT_URI, null)
     }
 
     private fun persistParts(context: Context, mmsUri: Uri, mmsId: Long, body: PduBody) {

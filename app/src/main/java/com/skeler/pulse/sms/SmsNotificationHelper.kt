@@ -70,11 +70,21 @@ object SmsNotificationHelper {
 
         val bitmap = imageUri?.let { uri ->
             try {
+                // First pass: decode bounds to compute sample size
+                val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
                 context.contentResolver.openInputStream(uri)?.use { stream ->
-                    BitmapFactory.decodeStream(stream)
+                    BitmapFactory.decodeStream(stream, null, opts)
                 }
+                val sampleSize = maxOf(opts.outWidth / 512, maxOf(opts.outHeight / 512, 1))
+                // Second pass: decode with sample size
+                val bmp = context.contentResolver.openInputStream(uri)?.use { stream ->
+                    BitmapFactory.Options().apply { inSampleSize = sampleSize }
+                        .let { BitmapFactory.decodeStream(stream, null, it) }
+                }
+                Log.i("SmsNotificationHelper", "Notification bitmap: ${bmp?.width}x${bmp?.height} (sample=$sampleSize) from $uri")
+                bmp
             } catch (e: Exception) {
-                Log.e("SmsNotificationHelper", "Failed to decode notification image", e)
+                Log.e("SmsNotificationHelper", "Failed to decode notification image from $uri", e)
                 null
             }
         }
