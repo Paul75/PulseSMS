@@ -245,10 +245,8 @@ internal class SystemSmsSender(
         val threadId = Telephony.Threads.getOrCreateThreadId(context, address)
         val maxSizeBytes = if (maxImageSizeKb <= 0) -1 else maxImageSizeKb * 1024
         val imageBytesList = imageUris.mapNotNull { uri ->
-            runCatching {
-                val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: return@runCatching null
-                compressImageToMaxSize(bytes, maxSizeBytes)
-            }.getOrNull()?.takeIf { it.isNotEmpty() }
+            val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: return@mapNotNull null
+            compressImageToMaxSize(bytes, maxSizeBytes)
         }
         if (imageBytesList.isEmpty() && text.isBlank()) throw RuntimeException("No content to send")
         val now = System.currentTimeMillis()
@@ -444,8 +442,8 @@ internal class SystemSmsSender(
             sampleSize *= 2
         }
 
-        Log.w("SystemSmsSender", "compress: could not fit in $maxSizeBytes B, sending original (${bytes.size}B)")
-        return bytes
+        Log.w("SystemSmsSender", "compress: could not fit in $maxSizeBytes B")
+        throw RuntimeException("L'image compressée dépasse la limite de ${maxSizeBytes / 1024} Ko. Réduisez la limite ou choisissez une image plus petite.")
     }
 
     private fun buildCallbackIntents(
