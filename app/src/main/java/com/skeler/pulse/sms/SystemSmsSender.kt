@@ -276,50 +276,67 @@ internal class SystemSmsSender(
         // Insert our own MMS record with correct thread_id and addresses
         val messageUri = insertMmsRecord(threadId, address, text, imageBytesList, pduBytes.size, now)
 
-        // Load APN settings from klinker's bundled carrier database
-        suspendCancellableCoroutine<Unit> { cont ->
-            com.klinker.android.send_message.ApnUtils.initDefaultApns(context) {
-                cont.resume(Unit)
-            }
+        // Try system sendMultimediaMessage first (works on stock Android)
+        val sentIntent = PendingIntent.getBroadcast(
+            context,
+            (now % Int.MAX_VALUE).toInt(),
+            Intent("com.skeler.pulse.mms.SENT").setPackage(context.packageName),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        val sentViaSystem = try {
+            SmsManager.getDefault().sendMultimediaMessage(context, messageUri, null, null, sentIntent)
+            true
+        } catch (e: Exception) {
+            Log.w("SystemSmsSender", "sendMultimediaMessage failed, falling back to HTTP", e)
+            false
         }
 
-        val prefs = android.preference.PreferenceManager.getDefaultSharedPreferences(context)
-        var mmsc = prefs.getString("mmsc_url", "")
-        var mmsProxy = prefs.getString("mms_proxy", "")
-        var mmsPort = prefs.getString("mms_port", "80")
+        if (!sentViaSystem) {
+            // Fallback: direct HTTP POST to MMSC
+            // Load APN settings from klinker's bundled carrier database
+            suspendCancellableCoroutine<Unit> { cont ->
+                com.klinker.android.send_message.ApnUtils.initDefaultApns(context) {
+                    cont.resume(Unit)
+                }
+            }
 
-        // Fallback: query the system APN provider directly
-        if (mmsc.isNullOrBlank()) {
-            Log.w("SystemSmsSender", "ApnUtils gave no MMSC, querying system APN provider")
-            val subId = try { android.telephony.SubscriptionManager.getDefaultSubscriptionId() } catch (_: Exception) { -1 }
-            if (subId >= 0) {
-                val apnUri = Telephony.Carriers.CONTENT_URI.buildUpon()
-                    .appendPath("subId").appendPath(subId.toString()).build()
-                val cursor = try {
-                    contentResolver.query(apnUri, null, "type LIKE '%mms%'", null, null)
-                } catch (_: Exception) { null }
-                cursor?.use { c ->
-                    while (c.moveToNext()) {
-                        val url = c.getString(c.getColumnIndexOrThrow("mmsc"))
-                        if (!url.isNullOrBlank()) {
-                            mmsc = url
-                            mmsProxy = c.getString(c.getColumnIndexOrThrow("mmsproxy"))
-                            mmsPort = c.getString(c.getColumnIndexOrThrow("mmsport"))
-                            break
+            val prefs = android.preference.PreferenceManager.getDefaultSharedPreferences(context)
+            var mmsc = prefs.getString("mmsc_url", "")
+            var mmsProxy = prefs.getString("mms_proxy", "")
+            var mmsPort = prefs.getString("mms_port", "80")
+
+            if (mmsc.isNullOrBlank()) {
+                Log.w("SystemSmsSender", "ApnUtils gave no MMSC, querying system APN provider")
+                val subId = try { android.telephony.SubscriptionManager.getDefaultSubscriptionId() } catch (_: Exception) { -1 }
+                if (subId >= 0) {
+                    val apnUri = Telephony.Carriers.CONTENT_URI.buildUpon()
+                        .appendPath("subId").appendPath(subId.toString()).build()
+                    val cursor = try {
+                        contentResolver.query(apnUri, null, "type LIKE '%mms%'", null, null)
+                    } catch (_: Exception) { null }
+                    cursor?.use { c ->
+                        while (c.moveToNext()) {
+                            val url = c.getString(c.getColumnIndexOrThrow("mmsc"))
+                            if (!url.isNullOrBlank()) {
+                                mmsc = url
+                                mmsProxy = c.getString(c.getColumnIndexOrThrow("mmsproxy"))
+                                mmsPort = c.getString(c.getColumnIndexOrThrow("mmsport"))
+                                break
+                            }
                         }
                     }
                 }
             }
-        }
-        Log.i("SystemSmsSender", "MMSC=$mmsc proxy=$mmsProxy port=$mmsPort")
+            Log.i("SystemSmsSender", "MMSC=$mmsc proxy=$mmsProxy port=$mmsPort")
 
-        val resolvedMmsc = mmsc
-        if (resolvedMmsc.isNullOrBlank()) {
-            Log.e("SystemSmsSender", "No MMSC found, cannot send MMS")
-            throw RuntimeException("No MMSC configured")
-        }
+            val resolvedMmsc = mmsc
+            if (resolvedMmsc.isNullOrBlank()) {
+                Log.e("SystemSmsSender", "No MMSC found, cannot send MMS")
+                throw RuntimeException("No MMSC configured")
+            }
 
-        sendPduToMmsc(pduBytes, resolvedMmsc, if (mmsProxy.isNullOrBlank()) null else mmsProxy, mmsPort?.toIntOrNull() ?: 80)
+            sendPduToMmsc(pduBytes, resolvedMmsc, if (mmsProxy.isNullOrBlank()) null else mmsProxy, mmsPort?.toIntOrNull() ?: 80)
+        }
 
         if (messageUri != null) {
             contentResolver.update(messageUri, ContentValues().apply {
