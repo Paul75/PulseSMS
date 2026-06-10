@@ -7,6 +7,7 @@ import android.net.Uri
 import android.provider.Telephony
 import android.telephony.SmsMessage
 import android.util.Log
+import com.skeler.pulse.R
 import java.util.Collections
 import java.util.LinkedHashSet
 
@@ -32,9 +33,8 @@ object SmsProcessingHelper {
 
             val timestampMillis = parts.first().timestampMillis
             val dedupKey = "$sender|$body|$timestampMillis"
-            if (!processedRecently.add(dedupKey)) continue
-
             synchronized(processedRecently) {
+                if (!processedRecently.add(dedupKey)) continue
                 if (processedRecently.size > MAX_DEDUP_SIZE) {
                     processedRecently.remove(processedRecently.first())
                 }
@@ -61,7 +61,7 @@ object SmsProcessingHelper {
                 SmsNotificationHelper.notifyIncomingSms(
                     context = context,
                     sender = sender,
-                    body = "New message received, but Pulse couldn't save it yet.",
+                    body = context.getString(R.string.sms_body_save_failed),
                     quickReplyEnabled = quickReplyEnabled,
                 )
             }

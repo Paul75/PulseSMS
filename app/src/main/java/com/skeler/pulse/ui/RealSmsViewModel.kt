@@ -285,9 +285,7 @@ class RealSmsViewModel(
         sendJob = viewModelScope.launch {
             try {
                 if (imageUris.isNotEmpty()) {
-                    imageUris.forEach { uri ->
-                        smsReader.sendMms(address, trimmedBody, listOf(uri))
-                    }
+                    smsReader.sendMms(address, trimmedBody, imageUris)
                 } else {
                     smsReader.sendSms(address, trimmedBody, subscriptionId)
                 }
@@ -299,10 +297,6 @@ class RealSmsViewModel(
                     _sendState.value = SendState.Idle
                 }
             } catch (_: Exception) {
-                if (sendSequence == seq) {
-                    _sendState.value = SendState.Failed(trimmedBody)
-                }
-            } catch (_: Throwable) {
                 if (sendSequence == seq) {
                     _sendState.value = SendState.Failed(trimmedBody)
                 }

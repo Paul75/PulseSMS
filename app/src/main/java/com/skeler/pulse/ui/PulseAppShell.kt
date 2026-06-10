@@ -37,6 +37,7 @@ import com.skeler.pulse.contact.displayNameFor
 import com.skeler.pulse.design.theme.SerafinaThemeViewModel
 import com.skeler.pulse.design.util.rememberReducedMotionEnabled
 import com.skeler.pulse.security.auth.checkBiometricAvailability
+import com.skeler.pulse.R
 import com.skeler.pulse.shouldHandleOpenNewChatRequest
 
 @Composable
@@ -378,7 +379,7 @@ private fun openDialer(context: Context, address: String) {
     try {
         context.startActivity(dialIntent)
     } catch (exception: ActivityNotFoundException) {
-        Toast.makeText(context, "No call app available", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, context.getString(R.string.no_call_app_available), Toast.LENGTH_SHORT).show()
     }
 }
 

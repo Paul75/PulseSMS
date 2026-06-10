@@ -323,7 +323,7 @@ internal fun ConversationComposer(
                         ) {
                             Icon(
                                 imageVector = Icons.Rounded.Close,
-                                contentDescription = "Remove",
+                                                contentDescription = stringResource(R.string.action_remove),
                                 modifier = Modifier.size(16.dp),
                                 tint = MaterialTheme.colorScheme.onSurface,
                             )
@@ -571,17 +571,17 @@ internal fun ConversationComposer(
                                             horizontalAlignment = Alignment.CenterHorizontally,
                                             verticalArrangement = Arrangement.Center,
                                         ) {
-                                            Text(
-                                                text = "Allow access to photos",
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            )
-                                            Spacer(Modifier.height(8.dp))
-                                            FilledTonalButton(
-                                                onClick = { mediaPermissionLauncher.launch(mediaPermission) },
-                                            ) {
-                                                Text("Grant permission")
-                                            }
+                                                Text(
+                                                    text = stringResource(R.string.attachment_allow_access),
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                )
+                                                Spacer(Modifier.height(8.dp))
+                                                FilledTonalButton(
+                                                    onClick = { mediaPermissionLauncher.launch(mediaPermission) },
+                                                ) {
+                                                    Text(stringResource(R.string.attachment_grant_permission))
+                                                }
                                         }
                                     } else if (recentPhotos.isNotEmpty()) {
                                         LazyVerticalGrid(
@@ -619,7 +619,7 @@ internal fun ConversationComposer(
                                                             ) {
                                                                 Icon(
                                                                     imageVector = Icons.Rounded.CheckCircle,
-                                                                    contentDescription = "Selected",
+                                                                    contentDescription = stringResource(R.string.attachment_selected),
                                                                     modifier = Modifier
                                                                         .align(Alignment.TopEnd)
                                                                         .padding(3.dp)
@@ -640,7 +640,7 @@ internal fun ConversationComposer(
                                             contentAlignment = Alignment.Center,
                                         ) {
                                             Text(
-                                                text = "No recent photos",
+                                                text = stringResource(R.string.attachment_no_recent_photos),
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             )
@@ -743,7 +743,7 @@ private fun CameraPreviewContent(
             verticalArrangement = Arrangement.Center,
         ) {
             Text(
-                text = "Camera permission required",
+                text = stringResource(R.string.camera_permission_required),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -751,7 +751,7 @@ private fun CameraPreviewContent(
             FilledTonalButton(
                 onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) },
             ) {
-                Text("Grant permission")
+                Text(stringResource(R.string.attachment_grant_permission))
             }
         }
         return
@@ -818,7 +818,7 @@ private fun CameraPreviewContent(
             ) {
                 Icon(
                     imageVector = Icons.Rounded.CameraAlt,
-                    contentDescription = "Take photo",
+                    contentDescription = stringResource(R.string.attachment_take_photo),
                     modifier = Modifier.size(28.dp),
                     tint = Color.Black,
                 )

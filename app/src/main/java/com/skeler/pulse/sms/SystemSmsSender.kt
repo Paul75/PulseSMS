@@ -17,6 +17,7 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 import com.klinker.android.send_message.Transaction
 import com.google.android.mms.MMSPart
+import com.skeler.pulse.R
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
@@ -267,7 +268,7 @@ internal class SystemSmsSender(
             })
         }
 
-        val myNumber = MyPhoneNumberProvider.detect(context) ?: "+33762776815"
+        val myNumber = MyPhoneNumberProvider.detect(context) ?: throw RuntimeException("Cannot detect own phone number. MMS requires a valid SIM.")
         val messageInfo = Transaction.getBytes(
             context,
             false,
@@ -279,7 +280,7 @@ internal class SystemSmsSender(
         val pduBytes = messageInfo.bytes ?: throw RuntimeException("PDU generation failed — image may be too large")
 
         // Insert our own MMS record with correct thread_id and addresses
-        val messageUri = insertMmsRecord(threadId, address, text, imageBytesList, pduBytes.size, now)
+        val messageUri = insertMmsRecord(threadId, address, text, imageBytesList, pduBytes.size, now, myNumber)
 
         // Load APN settings from klinker's bundled carrier database
         suspendCancellableCoroutine<Unit> { cont ->
@@ -366,7 +367,7 @@ internal class SystemSmsSender(
     }
 
     private fun insertMmsRecord(
-        threadId: Long, address: String, text: String, imageBytesList: List<ByteArray>, pduSize: Int, now: Long,
+        threadId: Long, address: String, text: String, imageBytesList: List<ByteArray>, pduSize: Int, now: Long, myNumber: String,
     ): Uri? {
         val mmsValues = ContentValues().apply {
             put("thread_id", threadId)
@@ -407,7 +408,7 @@ internal class SystemSmsSender(
             }
         }
         contentResolver.insert(Uri.parse("content://mms/$mmsId/addr"), ContentValues().apply {
-            put("address", MyPhoneNumberProvider.detect(context) ?: "+33762776815")
+            put("address", myNumber)
             put("charset", 106)
             put("type", 137)
         })
@@ -453,7 +454,7 @@ internal class SystemSmsSender(
         }
 
         Log.w("SystemSmsSender", "compress: could not fit in $maxSizeBytes B")
-        throw RuntimeException("L'image compressée dépasse la limite de ${maxSizeBytes / 1024} Ko. Réduisez la limite ou choisissez une image plus petite.")
+        throw RuntimeException(context.getString(R.string.mms_image_too_large, maxSizeBytes / 1024))
     }
 
     private fun buildCallbackIntents(

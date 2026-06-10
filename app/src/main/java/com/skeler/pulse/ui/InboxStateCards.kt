@@ -112,11 +112,11 @@ internal fun InboxLoadingStateCard(
     modifier: Modifier = Modifier,
 ) {
     InboxStateCard(
-        title = "Loading your threads",
-        body = "Pulse is syncing with Android so your latest messages appear in one place.",
-        statusLabel = "Inbox refresh",
+        title = stringResource(R.string.inbox_loading_title),
+        body = stringResource(R.string.inbox_loading_body),
+        statusLabel = stringResource(R.string.inbox_loading_status),
         icon = Icons.Rounded.HourglassTop,
-        actionLabel = "Refresh",
+        actionLabel = stringResource(R.string.inbox_loading_action),
         onAction = onRefreshInbox,
         modifier = modifier,
     ) {
@@ -130,11 +130,11 @@ internal fun InboxEmptyStateCard(
     modifier: Modifier = Modifier,
 ) {
     InboxStateCard(
-        title = "Your inbox is ready",
-        body = "There are no SMS threads here yet. Start a new conversation and Pulse will keep the lane warm for you.",
-        statusLabel = "Zero threads",
+        title = stringResource(R.string.inbox_empty_title),
+        body = stringResource(R.string.inbox_empty_body),
+        statusLabel = stringResource(R.string.inbox_empty_status),
         icon = Icons.Rounded.AddComment,
-        actionLabel = "New chat",
+        actionLabel = stringResource(R.string.inbox_empty_action),
         onAction = onOpenNewChat,
         modifier = modifier,
     )

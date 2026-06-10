@@ -16,7 +16,6 @@ import com.skeler.pulse.contact.normalizeAddressForDisplay
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.InetSocketAddress
@@ -48,7 +47,7 @@ class MmsReceiver : BroadcastReceiver() {
         }
     }
 
-    private fun handleWapPush(context: Context, pduData: ByteArray) {
+    private suspend fun handleWapPush(context: Context, pduData: ByteArray) {
         val pdu = PduParser(pduData).parse()
         if (pdu !is NotificationInd) {
             Log.w(TAG, "Unexpected PDU type: ${pdu?.javaClass?.simpleName}")
@@ -82,22 +81,20 @@ class MmsReceiver : BroadcastReceiver() {
         storeMms(context, retrieveConf, from)
     }
 
-    private fun downloadFromLocation(context: Context, locationUrl: String): ByteArray? {
+    private suspend fun downloadFromLocation(context: Context, locationUrl: String): ByteArray? {
         return try {
             val url = URL(locationUrl)
-            val (proxyHost, proxyPort) = runBlocking {
-                val mmsPrefs = MmsPreferences(context)
-                val dsHost = mmsPrefs.getMmsProxy()
-                val dsPort = mmsPrefs.getMmsPort()
-                if (!dsHost.isNullOrBlank()) {
-                    dsHost to (dsPort?.toIntOrNull() ?: 80)
-                } else {
-                    // Fallback to SharedPreferences (klinker ApnUtils writes there)
-                    val sp = context.getSharedPreferences(context.packageName + "_preferences", Context.MODE_PRIVATE)
-                    val spHost = sp.getString("mms_proxy", "") ?: ""
-                    val spPort = sp.getString("mms_port", "80")?.toIntOrNull() ?: 80
-                    spHost to spPort
-                }
+            val mmsPrefs = MmsPreferences(context)
+            val dsHost = mmsPrefs.getMmsProxy()
+            val dsPort = mmsPrefs.getMmsPort()
+            val (proxyHost, proxyPort) = if (!dsHost.isNullOrBlank()) {
+                dsHost to (dsPort?.toIntOrNull() ?: 80)
+            } else {
+                // Fallback to SharedPreferences (klinker ApnUtils writes there)
+                val sp = context.getSharedPreferences(context.packageName + "_preferences", Context.MODE_PRIVATE)
+                val spHost = sp.getString("mms_proxy", "") ?: ""
+                val spPort = sp.getString("mms_port", "80")?.toIntOrNull() ?: 80
+                spHost to spPort
             }
 
             val connection = if (proxyHost.isNotBlank()) {
@@ -126,7 +123,7 @@ class MmsReceiver : BroadcastReceiver() {
         }
     }
 
-    private fun storeMms(context: Context, conf: RetrieveConf, fromFallback: String) {
+    private suspend fun storeMms(context: Context, conf: RetrieveConf, fromFallback: String) {
         val fromRaw = conf.from?.string ?: fromFallback
         val fromDisplay = fromRaw
             .normalizeAddressForDisplay()
@@ -192,7 +189,7 @@ class MmsReceiver : BroadcastReceiver() {
         val senderForNotification = fromDisplay.takeUnless { it == context.getString(R.string.mms_sender_label) }.orEmpty()
 
         val quickReplyEnabled = try {
-            runBlocking { NotificationPreferences(context).isQuickReplyEnabled() }
+            NotificationPreferences(context).isQuickReplyEnabled()
         } catch (e: Exception) {
             true
         }

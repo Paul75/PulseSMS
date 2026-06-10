@@ -147,6 +147,8 @@
     <string name="notification_action_delete">Supprimer</string>
 
     <!-- Quick compose notification -->
+    <string name="quick_compose_channel_name">Composition rapide</string>
+    <string name="quick_compose_channel_description">Composez et envoyez des SMS depuis le volet de notification</string>
     <string name="quick_compose_title">Composition rapide</string>
     <string name="quick_compose_no_contact">Aucun contact sélectionné</string>
     <string name="quick_compose_to_label">À :</string>
@@ -245,4 +247,33 @@
     <string name="settings_mms_size_kb">%d Ko</string>
     <string name="settings_mms_size_mb">1 Mo</string>
     <string name="settings_mms_size_unlimited">Illimité</string>
+
+    <!-- MMS image dialogs -->
+    <string name="mms_image_saved">Image enregistrée</string>
+    <string name="mms_image_save_failed">Échec de l\'enregistrement</string>
+    <string name="mms_image_download">Télécharger</string>
+    <string name="mms_image_too_large">L\'image compressée dépasse la limite de %1$d Ko. Réduisez la limite ou choisissez une image plus petite.</string>
+
+    <!-- Inbox state cards -->
+    <string name="inbox_loading_title">Chargement des conversations</string>
+    <string name="inbox_loading_body">Pulse synchronise avec Android pour afficher vos derniers messages.</string>
+    <string name="inbox_loading_status">Rafraîchissement</string>
+    <string name="inbox_loading_action">Rafraîchir</string>
+    <string name="inbox_empty_title">Boîte de réception prête</string>
+    <string name="inbox_empty_body">Aucune conversation SMS pour le moment. Lancez une nouvelle discussion et Pulse gardera la voie ouverte.</string>
+    <string name="inbox_empty_status">Aucune conversation</string>
+    <string name="inbox_empty_action">Nouveau message</string>
+
+    <!-- Attachment sheet -->
+    <string name="attachment_allow_access">Autoriser l\'accès aux photos</string>
+    <string name="attachment_grant_permission">Autoriser</string>
+    <string name="attachment_no_recent_photos">Aucune photo récente</string>
+    <string name="attachment_selected">Sélectionné</string>
+    <string name="attachment_take_photo">Prendre une photo</string>
+    <string name="camera_permission_required">Permission caméra requise</string>
+
+    <!-- Misc -->
+    <string name="no_call_app_available">Aucune application d\'appel disponible</string>
+    <string name="inbox_read_error_body">Pulse n\'a pas pu lire vos messages pour le moment.</string>
+    <string name="sms_body_save_failed">Nouveau message reçu, mais Pulse n\'a pas pu l\'enregistrer.</string>
 </resources>

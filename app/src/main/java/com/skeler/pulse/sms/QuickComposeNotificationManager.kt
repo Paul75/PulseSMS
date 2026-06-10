@@ -30,10 +30,10 @@ object QuickComposeNotificationManager {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "Composition rapide",
+                context.getString(R.string.quick_compose_channel_name),
                 NotificationManager.IMPORTANCE_LOW,
             ).apply {
-                description = "Composez et envoyez des SMS depuis le volet de notification"
+                description = context.getString(R.string.quick_compose_channel_description)
                 setShowBadge(false)
             }
             context.getSystemService(NotificationManager::class.java)

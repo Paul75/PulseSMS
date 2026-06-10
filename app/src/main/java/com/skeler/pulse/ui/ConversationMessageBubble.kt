@@ -460,14 +460,14 @@ private fun MmsImageDialog(
                     .size(40.dp)
                     .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(20.dp)),
             ) {
-                Icon(Icons.Rounded.Close, contentDescription = "Close", tint = Color.White)
+                Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.action_close), tint = Color.White)
             }
             IconButton(
                 onClick = {
                     val savedUri = saveMmsImage(context, uri)
                     if (savedUri != null) {
                         android.widget.Toast
-                            .makeText(context, "Image enregistrée", android.widget.Toast.LENGTH_SHORT)
+                            .makeText(context, context.getString(R.string.mms_image_saved), android.widget.Toast.LENGTH_SHORT)
                             .show()
                         try {
                             val viewIntent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
@@ -478,7 +478,7 @@ private fun MmsImageDialog(
                         } catch (_: android.content.ActivityNotFoundException) {}
                     } else {
                         android.widget.Toast
-                            .makeText(context, "Échec de l'enregistrement", android.widget.Toast.LENGTH_SHORT)
+                            .makeText(context, context.getString(R.string.mms_image_save_failed), android.widget.Toast.LENGTH_SHORT)
                             .show()
                     }
                     onDismiss()
@@ -489,7 +489,7 @@ private fun MmsImageDialog(
                     .size(48.dp)
                     .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(24.dp)),
             ) {
-                Icon(Icons.Rounded.Download, contentDescription = "Download", tint = Color.White)
+                Icon(Icons.Rounded.Download, contentDescription = stringResource(R.string.mms_image_download), tint = Color.White)
             }
         }
     }
@@ -500,7 +500,7 @@ private fun saveMmsImage(context: android.content.Context, uri: Uri): Uri? {
         val resolver = context.contentResolver
         val bytes = resolver.openInputStream(uri)?.use { it.readBytes() } ?: return null
 
-        val filename = "Pulse_${java.lang.System.currentTimeMillis()}.jpg"
+        val filename = "Pulse_${System.currentTimeMillis()}.jpg"
         val values = ContentValues().apply {
             put(MediaStore.Images.Media.DISPLAY_NAME, filename)
             put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
